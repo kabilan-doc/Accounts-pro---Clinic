@@ -55,8 +55,19 @@ interface MonthStats {
 // ── helpers ────────────────────────────────────────────────────────────────────
 async function fetchMonthStats(fy: number, month: string): Promise<MonthStats> {
   const { start, end } = fyMonthDate(fy, month);
+  const empty = { month, fy, income:0, expense:0, net:0, cash:0, upi:0, entries:0, consultation:0, pharmacy:0, procedure:0, other:0 };
+
+  // FY2025 (Apr 2025–Mar 2026): read from daily_accounts
+  if (fy === 2025) {
+    const res = await fetch(`/api/accounts/monthly-stats?start=${start}&end=${end}`);
+    if (!res.ok) return empty;
+    const d = await res.json();
+    return { month, fy, ...d };
+  }
+
+  // FY2026+: read from account_entries
   const res = await fetch(`/api/entries?start_date=${start}&end_date=${end.substring(0,10)}&page=1`);
-  if (!res.ok) return { month, fy, income:0, expense:0, net:0, cash:0, upi:0, entries:0, consultation:0, pharmacy:0, procedure:0, other:0 };
+  if (!res.ok) return empty;
 
   const data = await res.json();
   let allEntries = [...(data.entries ?? [])];
