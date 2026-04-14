@@ -202,7 +202,7 @@ export default function HistoricalPage() {
         Promise.all(MONTHS.map(m => fetchMonthStats(2025, m))),
         Promise.all(MONTHS.map(m => fetchMonthStats(2026, m)))
       ]);
-      setStats2025(s25.filter(s => s.income > 0 || s.expense > 0));
+      setStats2025(s25);
       setStats2026(s26.filter(s => s.income > 0 || s.expense > 0));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error loading data');
