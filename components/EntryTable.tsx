@@ -76,17 +76,57 @@ export function EntryTable({
 
   return (
     <>
-      {/* ── table ── */}
-      <div className="overflow-x-auto rounded-2xl border border-slate-200">
+      {/* ── Mobile card list (< sm) ── */}
+      <div className="sm:hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 overflow-hidden">
+        {entries.length === 0 && (
+          <p className="px-4 py-10 text-center text-slate-400 text-sm">No entries found</p>
+        )}
+        {entries.map(row => (
+          <div key={row.id} className={`p-4 ${row.is_voided ? 'opacity-50' : ''}`}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  row.entry_type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                }`}>
+                  {row.entry_type === 'income' ? 'Income' : 'Expense'}
+                </span>
+                <span className="text-xs text-slate-500">{row.entry_date}</span>
+                {row.is_voided && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                    <AlertTriangle size={10} /> Voided
+                  </span>
+                )}
+              </div>
+              <span className={`font-bold text-sm whitespace-nowrap ${row.is_voided ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                {formatINR(row.amount)}
+              </span>
+            </div>
+            <p className={`mt-1.5 text-sm font-medium text-slate-700 ${row.is_voided ? 'line-through' : ''}`}>{row.category}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{row.payment_mode} · {row.description || '—'}</p>
+            {canVoid && !row.is_voided && (
+              <button
+                type="button"
+                onClick={() => { setVoidTarget(row); setVoidReason(''); setVoidError(''); }}
+                className="mt-2 rounded-lg bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-100"
+              >
+                Void
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Desktop table (sm+) ── */}
+      <div className="hidden sm:block overflow-x-auto rounded-2xl border border-slate-200">
         <table className="min-w-full divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Date</th>
+              <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3 text-left font-medium text-slate-600 whitespace-nowrap">Date</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Type</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Category</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Mode</th>
+              <th className="hidden md:table-cell px-4 py-3 text-left font-medium text-slate-600">Mode</th>
               <th className="px-4 py-3 text-right font-medium text-slate-600">Amount</th>
-              <th className="px-4 py-3 text-left font-medium text-slate-600">Description</th>
+              <th className="hidden lg:table-cell px-4 py-3 text-left font-medium text-slate-600">Description</th>
               <th className="px-4 py-3 text-left font-medium text-slate-600">Status</th>
               {canVoid && (
                 <th className="px-4 py-3 text-left font-medium text-slate-600">Actions</th>
@@ -106,7 +146,7 @@ export function EntryTable({
                 key={row.id}
                 className={`transition hover:bg-slate-50 ${row.is_voided ? 'opacity-50' : ''}`}
               >
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-700">
+                <td className="sticky left-0 z-10 bg-white whitespace-nowrap px-4 py-3 font-medium text-slate-700">
                   {row.entry_date}
                 </td>
                 <td className="px-4 py-3">
@@ -124,13 +164,13 @@ export function EntryTable({
                     <span className="ml-1 text-xs text-slate-400">· {row.subcategory}</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{row.payment_mode}</td>
+                <td className="hidden md:table-cell px-4 py-3 text-slate-600">{row.payment_mode}</td>
                 <td className="px-4 py-3 text-right font-semibold text-slate-800">
                   <span className={row.is_voided ? 'line-through' : ''}>
                     {formatINR(row.amount)}
                   </span>
                 </td>
-                <td className="max-w-[200px] truncate px-4 py-3 text-slate-600" title={row.description}>
+                <td className="hidden lg:table-cell max-w-[200px] truncate px-4 py-3 text-slate-600" title={row.description}>
                   {row.description}
                   {row.reference_number && (
                     <span className="ml-1 text-xs text-slate-400">#{row.reference_number}</span>
@@ -195,8 +235,8 @@ export function EntryTable({
 
       {/* ── void modal ── */}
       {voidTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:px-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-6 sm:p-8 shadow-2xl">
             <h3 className="text-xl font-semibold text-slate-900">Void Entry</h3>
             <p className="mt-2 text-sm text-slate-600">
               You are about to void{' '}

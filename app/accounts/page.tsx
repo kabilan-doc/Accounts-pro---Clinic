@@ -268,7 +268,7 @@ export default function AccountsPage() {
           </div>
 
           {/* Table */}
-          <div className="card overflow-x-auto p-0">
+          <div className="card overflow-x-auto p-0 overscroll-x-contain">
             {loading ? (
               <div className="space-y-2 p-4">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -282,7 +282,13 @@ export default function AccountsPage() {
                 <thead>
                   <tr className="bg-gradient-to-r from-slate-800 to-slate-700 text-white">
                     {(isFY2025 ? headers2025 : headers2026).map((h, i) => (
-                      <th key={i} className="whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">{h}</th>
+                      <th
+                        key={i}
+                        className={`whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider
+                          ${i === 0 ? 'sticky left-0 z-20 w-[44px] min-w-[44px] bg-slate-800' : ''}
+                          ${i === 1 ? 'sticky left-[44px] z-20 bg-slate-800' : ''}
+                        `}
+                      >{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -290,12 +296,13 @@ export default function AccountsPage() {
                   {rows.map(r => {
                     const ed = r.excess_deficit ?? 0;
                     const rowBg   = ed < 0 ? 'bg-red-50' : ed > 0 ? 'bg-green-50' : '';
+                    const stickyBg = ed < 0 ? 'bg-red-50' : ed > 0 ? 'bg-green-50' : 'bg-white';
                     const edColor = ed < 0 ? 'text-red-700 font-semibold' : ed > 0 ? 'text-green-700 font-semibold' : 'text-slate-500';
                     const dateStr = new Date(r.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
                     return (
                       <tr key={r.id} className={`border-b border-slate-100 ${rowBg} transition hover:brightness-95`}>
-                        {/* Edit button — admin only */}
-                        <td className="px-2 py-2">
+                        {/* Edit button — admin only — sticky */}
+                        <td className={`sticky left-0 z-10 w-[44px] min-w-[44px] px-2 py-2 ${stickyBg}`}>
                           {role === 'admin' ? (
                             <button
                               type="button"
@@ -309,7 +316,8 @@ export default function AccountsPage() {
                             <div className="w-7" />
                           )}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 font-medium text-slate-700">{dateStr}</td>
+                        {/* Date — sticky */}
+                        <td className={`sticky left-[44px] z-10 whitespace-nowrap px-3 py-2 font-medium text-slate-700 ${stickyBg}`}>{dateStr}</td>
                         <td className="px-3 py-2 text-slate-500">{r.day_name ?? '—'}</td>
 
                         {isFY2025 ? (
@@ -345,7 +353,7 @@ export default function AccountsPage() {
                 {rows.length > 0 && (
                   <tfoot>
                     <tr className="bg-slate-100 font-semibold text-slate-800 text-xs">
-                      <td className="px-3 py-3" colSpan={3}>TOTALS ({rows.length} days)</td>
+                      <td className="sticky left-0 z-10 bg-slate-100 px-3 py-3 whitespace-nowrap" colSpan={3}>TOTALS ({rows.length} days)</td>
 
                       {isFY2025 ? (
                         <>
@@ -387,8 +395,8 @@ export default function AccountsPage() {
 
       {/* Add / Edit Entry Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8">
-          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:px-4 sm:py-8">
+          <div className="w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl bg-white p-4 sm:p-6 shadow-2xl overflow-y-auto max-h-[92dvh]">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">

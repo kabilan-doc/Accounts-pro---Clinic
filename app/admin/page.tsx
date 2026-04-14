@@ -243,8 +243,35 @@ export default function AdminPage() {
 
             {userError && <p className="text-sm text-red-600">{userError}</p>}
 
-            {/* user list */}
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            {/* user list — cards on mobile, table on sm+ */}
+            <div className="sm:hidden rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 overflow-hidden">
+              {usersLoading && <p className="px-4 py-6 text-center text-slate-400 text-sm">Loading…</p>}
+              {!usersLoading && users.map(u => (
+                <div key={u.id} className="p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-800 truncate">{u.full_name}</p>
+                    <p className="text-xs text-slate-500 capitalize mt-0.5">{u.role}{u.phone_number ? ` · ${u.phone_number}` : ''}</p>
+                    <div className="mt-1"><Badge active={u.is_active} /></div>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button type="button" onClick={() => toggleActive(u)} title={u.is_active ? 'Deactivate' : 'Activate'}
+                      className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-100">
+                      {u.is_active ? <Lock size={14}/> : <Unlock size={14}/>}
+                    </button>
+                    <button type="button" onClick={() => openEdit(u)}
+                      className="rounded-lg border border-blue-200 p-2 text-blue-600 hover:bg-blue-50">
+                      <Edit2 size={14}/>
+                    </button>
+                    <button type="button" onClick={() => { setDeleteTarget(u); setDeleteErr(''); }}
+                      className="rounded-lg border border-red-200 p-2 text-red-500 hover:bg-red-50">
+                      <Trash2 size={14}/>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden sm:block overflow-x-auto rounded-2xl border border-slate-200">
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-slate-50">
                   <tr>
@@ -387,8 +414,8 @@ export default function AdminPage() {
 
       {/* reset PIN modal */}
       {resetTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:px-4">
+          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-4">
             <h3 className="text-lg font-semibold text-slate-900">Reset PIN — {resetTarget.full_name}</h3>
             <input
               placeholder="New 4-digit PIN"
@@ -414,8 +441,8 @@ export default function AdminPage() {
 
       {/* Edit Profile Modal */}
       {editTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl space-y-5">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:px-4">
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-5 overflow-y-auto max-h-[92dvh]">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-slate-900">Edit Profile</h3>
               <button type="button" onClick={() => setEditTarget(null)} className="rounded-xl p-1.5 hover:bg-slate-100"><X size={18}/></button>
@@ -464,8 +491,8 @@ export default function AdminPage() {
 
       {/* Delete Confirm Modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:px-4">
+          <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-4">
             <h3 className="text-lg font-semibold text-slate-900">Delete User?</h3>
             <p className="text-sm text-slate-600">
               Are you sure you want to delete <span className="font-semibold">{deleteTarget.full_name}</span>? This cannot be undone.
