@@ -33,12 +33,28 @@ export async function GET(request: Request) {
   // Also fetch daily_accounts for fallback (dates with no account_entries)
   const { data: dailyAccRows } = await supabaseAdmin
     .from('daily_accounts')
-    .select('date, total_sales, total_sale_amount, expense, total_cash, gpay')
+    .select('date, total_sales, total_sale_amount, total_medicine_sales, total_op_charges, trip_and_others, injection, expense, total_cash, gpay')
     .eq('clinic_id', CLINIC_ID)
     .gte('date', startDate)
     .lte('date', todayStr);
 
   const e = entries ?? [];
+
+  // Derive income from a daily_accounts row — prefer total_sales, fall back to component sum
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const daIncome = (da: any): number => {
+    const ts = Number(da.total_sales ?? 0);
+    if (ts > 0) return ts;
+    const tsa = Number(da.total_sale_amount ?? 0);
+    if (tsa > 0) return tsa;
+    // sum components
+    return (
+      Number(da.total_medicine_sales ?? 0) +
+      Number(da.total_op_charges ?? 0) +
+      Number(da.trip_and_others ?? 0) +
+      Number(da.injection ?? 0)
+    );
+  };
 
   const sum = (rows: typeof e, key: 'amount') =>
     rows.reduce((s, r) => s + Number(r[key]), 0);
@@ -53,7 +69,7 @@ export async function GET(request: Request) {
 
   // If today has no account_entries, fall back to daily_accounts
   const todayDA = (dailyAccRows ?? []).find(r => r.date === todayStr);
-  const todayIncFinal  = todayAll.length > 0 ? todayInc  : (todayDA ? Number(todayDA.total_sales ?? todayDA.total_sale_amount ?? 0) : 0);
+  const todayIncFinal  = todayAll.length > 0 ? todayInc  : (todayDA ? daIncome(todayDA) : 0);
   const todayExpFinal  = todayAll.length > 0 ? todayExp  : (todayDA ? Number(todayDA.expense ?? 0) : 0);
   const todayCashFinal = todayAll.length > 0 ? todayCash : (todayDA ? Number(todayDA.total_cash ?? 0) : 0);
   const todayUPIFinal  = todayAll.length > 0 ? todayUPI  : (todayDA ? Number(todayDA.gpay ?? 0) : 0);
@@ -101,7 +117,7 @@ export async function GET(request: Request) {
   for (const da of (dailyAccRows ?? [])) {
     if (!dateMap[da.date]) continue;
     if (dateMap[da.date].count > 0) continue; // account_entries takes priority
-    const income = Number(da.total_sales ?? da.total_sale_amount ?? 0);
+    const income = daIncome(da);
     const expense = Number(da.expense ?? 0);
     if (income === 0 && expense === 0) continue;
     dateMap[da.date].income  = income;
@@ -143,7 +159,7 @@ export async function GET(request: Request) {
     // Only add if this date had no account_entries
     const hasEntries = e.some(r => r.entry_date === da.date);
     if (hasEntries) continue;
-    monthIncFinal += Number(da.total_sales ?? da.total_sale_amount ?? 0);
+    monthIncFinal += daIncome(da);
     monthExpFinal += Number(da.expense ?? 0);
   }
 
