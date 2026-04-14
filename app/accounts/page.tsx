@@ -181,8 +181,8 @@ export default function AccountsPage() {
   const headers2025 = ['Date','Day','Total Sale','OP Charges','Injection','Medicine','GPay','Expense','GPay+Exp','Extra','Return','Total Cash','Cash Given','Excess/Deficit','Notes'];
 
   return (
-    <div className="container py-10">
-      <div className="grid gap-6 xl:grid-cols-[280px_1fr]">
+    <div className="w-full px-4 py-6">
+      <div className="grid gap-4 xl:grid-cols-[260px_1fr]">
         <Sidebar active="/accounts" />
 
         <section className="animate-fadeIn space-y-6 pb-24">
