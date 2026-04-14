@@ -64,6 +64,7 @@ export default function AdminPage() {
   // delete confirm
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [deleting,     setDeleting]     = useState(false);
+  const [deleteErr,    setDeleteErr]    = useState('');
 
   // ── categories ────────────────────────────────────────────────────────
   const [categories,   setCategories]   = useState<Category[]>([]);
@@ -174,12 +175,13 @@ export default function AdminPage() {
   const deleteUser = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
-    const res = await fetch(`/api/admin/users?id=${deleteTarget.id}`, { method: 'DELETE' });
-    if (res.ok) { setDeleteTarget(null); loadUsers(); }
-    else {
+    setDeleteErr('');
+    try {
+      const res = await fetch(`/api/admin/users?id=${deleteTarget.id}`, { method: 'DELETE' });
       const d = await res.json();
-      alert(d.message || 'Delete failed.');
-    }
+      if (res.ok) { setDeleteTarget(null); setDeleteErr(''); loadUsers(); }
+      else { setDeleteErr(d.message || 'Delete failed. The user may have linked records.'); }
+    } catch { setDeleteErr('Network error. Please try again.'); }
     setDeleting(false);
   };
 
@@ -275,7 +277,7 @@ export default function AdminPage() {
                             className="rounded-lg border border-blue-200 p-1.5 text-blue-600 hover:bg-blue-50">
                             <Edit2 size={14}/>
                           </button>
-                          <button type="button" onClick={() => setDeleteTarget(u)}
+                          <button type="button" onClick={() => { setDeleteTarget(u); setDeleteErr(''); }}
                             title="Delete user"
                             className="rounded-lg border border-red-200 p-1.5 text-red-500 hover:bg-red-50">
                             <Trash2 size={14}/>
@@ -468,8 +470,13 @@ export default function AdminPage() {
             <p className="text-sm text-slate-600">
               Are you sure you want to delete <span className="font-semibold">{deleteTarget.full_name}</span>? This cannot be undone.
             </p>
+            {deleteErr && (
+              <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+                <p className="text-sm text-red-700">{deleteErr}</p>
+              </div>
+            )}
             <div className="flex gap-3">
-              <button type="button" onClick={() => setDeleteTarget(null)}
+              <button type="button" onClick={() => { setDeleteTarget(null); setDeleteErr(''); }}
                 className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 hover:bg-slate-50">
                 Cancel
               </button>
