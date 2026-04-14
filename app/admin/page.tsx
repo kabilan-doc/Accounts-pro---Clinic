@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
+import { BottomNav } from '@/components/BottomNav';
 import {
-  UserPlus, RefreshCw, CheckCircle2, XCircle, Lock, Unlock, Edit2, Send
+  UserPlus, RefreshCw, CheckCircle2, XCircle, Lock, Unlock, Edit2, Trash2, Send, X
 } from 'lucide-react';
 
 interface UserRow {
@@ -50,6 +51,19 @@ export default function AdminPage() {
   const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
   const [resetPin,    setResetPin]    = useState('');
   const [resetMsg,    setResetMsg]    = useState('');
+
+  // edit profile modal
+  const [editTarget,  setEditTarget]  = useState<UserRow | null>(null);
+  const [editName,    setEditName]    = useState('');
+  const [editRole,    setEditRole]    = useState('');
+  const [editPhone,   setEditPhone]   = useState('');
+  const [editPin,     setEditPin]     = useState('');
+  const [editSaving,  setEditSaving]  = useState(false);
+  const [editMsg,     setEditMsg]     = useState('');
+
+  // delete confirm
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [deleting,     setDeleting]     = useState(false);
 
   // ── categories ────────────────────────────────────────────────────────
   const [categories,   setCategories]   = useState<Category[]>([]);
@@ -124,6 +138,49 @@ export default function AdminPage() {
     const d = await res.json();
     if (!res.ok) { setResetMsg(d.message || 'Failed.'); }
     else { setResetMsg('PIN reset.'); setResetTarget(null); setResetPin(''); loadUsers(); }
+  };
+
+  const openEdit = (u: UserRow) => {
+    setEditTarget(u);
+    setEditName(u.full_name);
+    setEditRole(u.role);
+    setEditPhone(u.phone_number ?? '');
+    setEditPin('');
+    setEditMsg('');
+  };
+
+  const saveEdit = async () => {
+    if (!editTarget || !editName) { setEditMsg('Name is required.'); return; }
+    if (editPin && !/^\d{4}$/.test(editPin)) { setEditMsg('PIN must be 4 digits.'); return; }
+    setEditSaving(true); setEditMsg('');
+    const body: Record<string, unknown> = {
+      id: editTarget.id,
+      full_name: editName,
+      role: editRole,
+      phone_number: editPhone || null,
+    };
+    if (editPin) body.new_pin = editPin;
+    const res = await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await res.json();
+    if (!res.ok) { setEditMsg(d.message || 'Save failed.'); }
+    else { setEditTarget(null); loadUsers(); }
+    setEditSaving(false);
+  };
+
+  const deleteUser = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const res = await fetch(`/api/admin/users?id=${deleteTarget.id}`, { method: 'DELETE' });
+    if (res.ok) { setDeleteTarget(null); loadUsers(); }
+    else {
+      const d = await res.json();
+      alert(d.message || 'Delete failed.');
+    }
+    setDeleting(false);
   };
 
   // ── category CRUD ─────────────────────────────────────────────────────
@@ -213,11 +270,15 @@ export default function AdminPage() {
                             className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100">
                             {u.is_active ? <Lock size={14}/> : <Unlock size={14}/>}
                           </button>
-                          <button type="button"
-                            onClick={() => { setResetTarget(u); setResetPin(''); setResetMsg(''); }}
-                            title="Reset PIN"
-                            className="rounded-lg border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-100">
+                          <button type="button" onClick={() => openEdit(u)}
+                            title="Edit profile"
+                            className="rounded-lg border border-blue-200 p-1.5 text-blue-600 hover:bg-blue-50">
                             <Edit2 size={14}/>
+                          </button>
+                          <button type="button" onClick={() => setDeleteTarget(u)}
+                            title="Delete user"
+                            className="rounded-lg border border-red-200 p-1.5 text-red-500 hover:bg-red-50">
+                            <Trash2 size={14}/>
                           </button>
                         </div>
                       </td>
@@ -348,6 +409,80 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Profile Modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-slate-900">Edit Profile</h3>
+              <button type="button" onClick={() => setEditTarget(null)} className="rounded-xl p-1.5 hover:bg-slate-100"><X size={18}/></button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="text-xs font-medium text-slate-600">Full Name *</span>
+                <input value={editName} onChange={e => setEditName(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-slate-600">Role</span>
+                <select value={editRole} onChange={e => setEditRole(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-medium text-slate-600">Phone</span>
+                <input value={editPhone} onChange={e => setEditPhone(e.target.value)}
+                  placeholder="Optional"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-xs font-medium text-slate-600">New PIN <span className="text-slate-400">(leave blank to keep current)</span></span>
+                <input value={editPin} onChange={e => setEditPin(e.target.value.replace(/\D/, ''))}
+                  maxLength={4} placeholder="4 digits"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" />
+              </label>
+            </div>
+            {editMsg && <p className="text-sm text-red-600">{editMsg}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setEditTarget(null)}
+                className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button type="button" onClick={saveEdit} disabled={editSaving}
+                className="flex-1 rounded-2xl bg-brand-600 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">
+                {editSaving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl space-y-4">
+            <h3 className="text-lg font-semibold text-slate-900">Delete User?</h3>
+            <p className="text-sm text-slate-600">
+              Are you sure you want to delete <span className="font-semibold">{deleteTarget.full_name}</span>? This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setDeleteTarget(null)}
+                className="flex-1 rounded-2xl border border-slate-200 bg-white py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button type="button" onClick={deleteUser} disabled={deleting}
+                className="flex-1 rounded-2xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60">
+                {deleting ? 'Deleting…' : 'Yes, Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <BottomNav active="/admin" />
     </div>
   );
 }

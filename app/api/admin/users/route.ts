@@ -62,7 +62,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const { id, is_active, new_pin, phone_number } = body;
+  const { id, is_active, new_pin, phone_number, full_name, role } = body;
 
   if (!id) {
     return NextResponse.json({ message: 'User id required.' }, { status: 400 });
@@ -71,7 +71,9 @@ export async function PATCH(request: Request) {
   const updates: Record<string, unknown> = {};
 
   if (typeof is_active === 'boolean') updates.is_active = is_active;
-  if (phone_number !== undefined) updates.phone_number = phone_number;
+  if (phone_number !== undefined) updates.phone_number = phone_number || null;
+  if (full_name) updates.full_name = full_name;
+  if (role) updates.role = role;
   if (new_pin) {
     if (!/^\d{4}$/.test(new_pin)) {
       return NextResponse.json({ message: 'PIN must be exactly 4 digits.' }, { status: 400 });
@@ -93,4 +95,19 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({ user: data });
+}
+
+export async function DELETE(request: Request) {
+  if (!adminOnly(request)) {
+    return NextResponse.json({ message: 'Admin only.' }, { status: 403 });
+  }
+
+  const url = new URL(request.url);
+  const id  = url.searchParams.get('id');
+  if (!id) return NextResponse.json({ message: 'User id required.' }, { status: 400 });
+
+  const { error } = await supabaseAdmin.from('profiles').delete().eq('id', id);
+  if (error) return NextResponse.json({ message: error.message }, { status: 500 });
+
+  return NextResponse.json({ ok: true });
 }
