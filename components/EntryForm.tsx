@@ -95,27 +95,29 @@ export function EntryForm() {
         return;
       }
 
-      // NOTE: daily_accounts is managed separately via the Accounts page
-      // Do not auto-create rows here to avoid duplicate/incorrect entries
-      if (false) await fetch('/api/accounts', {
+      // Sync to daily_accounts so Accounts Ledger stays up to date
+      const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+      const dayName = days[new Date(date + 'T00:00:00').getDay()];
+      await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          _fy:                   2026,
           date,
-          day_name:              '',
+          day_name:              dayName,
           total_medicine_sales:  n(med),
           no_of_op:              n(noOfOp),
           total_op_charges:      n(op),
           trip_and_others:       n(trip),
-          total_sales:           String(totalSales),
+          total_sales:           totalSales,
           gpay:                  n(gpay),
           expense:               n(expense),
-          gpay_and_expense:      String(gpayExpense),
+          gpay_and_expense:      gpayExpense,
           extra_charge:          n(extra),
           return_amount:         n(returns),
-          total_cash:            String(totalCash),
+          total_cash:            totalCash,
           total_cash_given:      n(cashGiven),
-          excess_deficit:        String(excessDeficit),
+          excess_deficit:        excessDeficit,
           notes:                 notes || null,
         })
       });

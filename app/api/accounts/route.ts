@@ -74,7 +74,7 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabaseAdmin
     .from('daily_accounts')
-    .insert(row)
+    .upsert(row, { onConflict: 'clinic_id,date' })
     .select()
     .single();
 
