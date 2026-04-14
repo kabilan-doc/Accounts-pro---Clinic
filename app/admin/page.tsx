@@ -162,8 +162,8 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container py-10">
-      <div className="grid gap-6 xl:grid-cols-[280px_1fr]">
+    <div className="w-full px-4 py-6">
+      <div className="grid gap-4 xl:grid-cols-[288px_1fr]">
         <Sidebar active="/admin" />
 
         <section className="space-y-8 pb-24">

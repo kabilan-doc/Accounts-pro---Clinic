@@ -182,7 +182,7 @@ export default function AccountsPage() {
 
   return (
     <div className="w-full px-4 py-6">
-      <div className="grid gap-4 xl:grid-cols-[260px_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[288px_1fr]">
         <Sidebar active="/accounts" />
 
         <section className="animate-fadeIn space-y-6 pb-24">
