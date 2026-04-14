@@ -1,5 +1,7 @@
+'use client';
+
 import Link from 'next/link';
-import { Home, PlusCircle, FileText, BarChart3, History } from 'lucide-react';
+import { Home, PlusCircle, FileText, BarChart3, History, LogOut } from 'lucide-react';
 
 export function BottomNav({ active }: { active: string }) {
   const tabs = [
@@ -34,6 +36,16 @@ export function BottomNav({ active }: { active: string }) {
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); window.location.href = '/login'; }}
+          className="flex flex-1 flex-col items-center gap-0.5 py-2"
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl text-red-400">
+            <LogOut className="h-4 w-4" />
+          </span>
+          <span className="text-[10px] font-medium text-red-400">Logout</span>
+        </button>
       </div>
     </nav>
   );

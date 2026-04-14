@@ -1,5 +1,12 @@
+'use client';
+
 import Link from 'next/link';
-import { Home, PlusCircle, FileText, BarChart3, ShieldCheck, ClipboardList, History, BookOpen } from 'lucide-react';
+import { Home, PlusCircle, FileText, BarChart3, ShieldCheck, ClipboardList, History, BookOpen, LogOut } from 'lucide-react';
+
+async function handleLogout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
 
 export function Sidebar({ active }: { active: string }) {
   const items = [
@@ -46,6 +53,18 @@ export function Sidebar({ active }: { active: string }) {
             );
           })}
         </nav>
+      </div>
+
+      {/* Logout */}
+      <div className="mt-4 border-t border-white/20 pt-4">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-300 transition-all duration-150 hover:bg-red-600 hover:text-white"
+        >
+          <LogOut className="h-[18px] w-[18px] shrink-0 transition-colors text-red-300 group-hover:text-white" />
+          Logout
+        </button>
       </div>
     </aside>
   );
