@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-feature-settings: 'cv02','cv03','cv04','cv11';
+}
+
+/* ── Base elements ── */
+button, input, select, textarea {
+  @apply font-sans;
+}
+
+input, textarea, select {
+  @apply rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm
+         transition-shadow duration-150
+         focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-200;
+}
+
+button {
+  @apply inline-flex items-center justify-center rounded-xl bg-brand-600 px-4 py-2 text-white
+         transition-all duration-150 hover:bg-brand-700 active:scale-[0.98]
+         disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+/* ── Layout ── */
+.container {
+  @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+/* ── Cards ── */
+.card {
+  @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-sm
+         transition-shadow duration-200 hover:shadow-md;
+}
+
+.card-flat {
+  @apply rounded-2xl border border-slate-100 bg-white p-6;
+}
+
+/* ── Shimmer skeleton ── */
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 800px 100%;
+  @apply animate-shimmer rounded-xl;
+}
+
+/* ── Page section fade-in ── */
+.page-section {
+  @apply animate-fadeIn;
+}
+
+/* ── Table improvements ── */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* ── Badge ── */
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+}
+
+.badge-green  { @apply bg-green-100 text-green-700; }
+.badge-red    { @apply bg-red-100 text-red-700; }
+.badge-blue   { @apply bg-blue-100 text-blue-700; }
+.badge-slate  { @apply bg-slate-100 text-slate-600; }
+
+/* ── Number inputs — hide spinners ── */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] { -moz-appearance: textfield; }
+
+.text-muted { @apply text-slate-500; }

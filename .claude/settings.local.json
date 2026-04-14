@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm list:*)",
+      "Bash(python3 -c \"import openpyxl; print\\('openpyxl ok'\\)\")",
+      "Bash(python -c \"import openpyxl; print\\('openpyxl ok'\\)\")",
+      "Bash(npm install:*)",
+      "Bash(powershell -Command \"Get-Process -Id 12180 | Select-Object Id, ProcessName, CommandLine, Path\")",
+      "Bash(powershell -Command \"Get-Process node | Stop-Process -Force; Write-Output 'All node processes killed'\")",
+      "Bash(node -e \"const a = require\\('./lib/auth'\\); console.log\\('auth ok'\\); const s = require\\('./lib/supabaseAdmin'\\); console.log\\('supabase ok'\\);\")",
+      "Bash(node -e \"require\\('@supabase/supabase-js'\\); console.log\\('ok'\\)\")",
+      "Bash(node -e \"require\\('bcryptjs'\\); console.log\\('ok'\\)\")"
+    ]
+  }
+}

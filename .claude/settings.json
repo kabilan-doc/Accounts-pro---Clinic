@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ':*)",
+      "Bash(node c:/tmp/delete-historical.mjs)",
+      "Bash(node scripts/delete-historical.mjs)",
+      "Bash(node scripts/verify-import.mjs)"
+    ]
+  }
+}
