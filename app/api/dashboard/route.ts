@@ -40,20 +40,21 @@ export async function GET(request: Request) {
 
   const e = entries ?? [];
 
-  // Derive income from a daily_accounts row — prefer total_sales, fall back to component sum
+  // Derive income from a daily_accounts row — cascade through all available fields
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const daIncome = (da: any): number => {
     const ts = Number(da.total_sales ?? 0);
     if (ts > 0) return ts;
     const tsa = Number(da.total_sale_amount ?? 0);
     if (tsa > 0) return tsa;
-    // sum components
-    return (
+    const components =
       Number(da.total_medicine_sales ?? 0) +
       Number(da.total_op_charges ?? 0) +
       Number(da.trip_and_others ?? 0) +
-      Number(da.injection ?? 0)
-    );
+      Number(da.injection ?? 0);
+    if (components > 0) return components;
+    // Last resort: cash + gpay collected = total collected that day
+    return Number(da.total_cash ?? 0) + Number(da.gpay ?? 0);
   };
 
   const sum = (rows: typeof e, key: 'amount') =>
