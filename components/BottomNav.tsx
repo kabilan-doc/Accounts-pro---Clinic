@@ -13,7 +13,7 @@ export function BottomNav({ active }: { active: string }) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-safe shadow-lg backdrop-blur-sm sm:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-2 pb-safe shadow-lg backdrop-blur-sm xl:hidden">
       <div className="mx-auto flex max-w-3xl items-center justify-between">
         {tabs.map(tab => {
           const isActive = active === tab.href;

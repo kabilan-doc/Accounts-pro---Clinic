@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 
@@ -10,7 +10,22 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Dr. Kabilan's Clinic — Accounts",
-  description: "Clinic accounts management system with income/expense tracking, audit logs, and WhatsApp reports."
+  description: "Clinic accounts management system with income/expense tracking, audit logs, and WhatsApp reports.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: "Clinic Accounts",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#2563eb',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

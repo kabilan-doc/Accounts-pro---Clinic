@@ -39,7 +39,7 @@ export default function AuditPage() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="w-full px-4 py-6">
+    <div className="w-full max-w-[1800px] mx-auto px-4 py-6">
       <div className="grid gap-4 xl:grid-cols-[288px_1fr]">
         <Sidebar active="/audit" />
 

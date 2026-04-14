@@ -8,6 +8,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* iOS momentum scrolling */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Scrollbar ── */
@@ -19,6 +21,8 @@ html {
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
   font-feature-settings: 'cv02','cv03','cv04','cv11';
+  /* Remove blue flash on tap (mobile) */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ── Base elements ── */
@@ -36,6 +40,8 @@ button {
   @apply inline-flex items-center justify-center rounded-xl bg-brand-600 px-4 py-2 text-white
          transition-all duration-150 hover:bg-brand-700 active:scale-[0.98]
          disabled:cursor-not-allowed disabled:opacity-60;
+  /* Faster tap response on mobile — no 300ms delay */
+  touch-action: manipulation;
 }
 
 /* ── Layout ── */
@@ -90,3 +96,11 @@ input[type=number]::-webkit-outer-spin-button {
 input[type=number] { -moz-appearance: textfield; }
 
 .text-muted { @apply text-slate-500; }
+
+/* ── Safe area for iOS notch / home indicator ── */
+/* Used by BottomNav as pb-safe */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+}
