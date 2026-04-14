@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PlusCircle, X } from 'lucide-react';
+import { PlusCircle, X, Pencil } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
 
@@ -83,10 +83,12 @@ export default function AccountsPage() {
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
 
+  const [role, setRole]           = useState<string>('');
   const [rows, setRows]           = useState<DailyAccount[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [form, setForm]           = useState<Record<string, string>>(EMPTY_FORM_2026);
   const [saving, setSaving]       = useState(false);
   const [saveErr, setSaveErr]     = useState('');
@@ -94,6 +96,10 @@ export default function AccountsPage() {
   // FY2025 = year 2025 (April 2025 – March 2026, historical format)
   // FY2026 = year 2026 onwards (new format)
   const isFY2025 = year === 2025;
+
+  useEffect(() => {
+    fetch('/api/me').then(r => r.json()).then(d => setRole(d.role ?? '')).catch(() => {});
+  }, []);
 
   useEffect(() => { load(year, month); }, [year, month]);
 
@@ -114,6 +120,35 @@ export default function AccountsPage() {
     const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
     const base = isFY2025 ? EMPTY_FORM_2025 : EMPTY_FORM_2026;
     setForm({ ...base, date: today.toISOString().substring(0, 10), day_name: days[today.getDay()] });
+    setIsEditing(false);
+    setSaveErr('');
+    setShowModal(true);
+  }
+
+  function openEditModal(row: DailyAccount) {
+    // Convert numeric fields to strings for the form
+    const f: Record<string, string> = {
+      date:                 row.date,
+      day_name:             row.day_name ?? '',
+      total_medicine_sales: String(row.total_medicine_sales ?? ''),
+      no_of_op:             String(row.no_of_op ?? ''),
+      total_op_charges:     String(row.total_op_charges ?? ''),
+      trip_and_others:      String(row.trip_and_others ?? ''),
+      total_sales:          String(row.total_sales ?? ''),
+      total_sale_amount:    String(row.total_sale_amount ?? ''),
+      injection:            String(row.injection ?? ''),
+      gpay:                 String(row.gpay ?? ''),
+      expense:              String(row.expense ?? ''),
+      gpay_and_expense:     String(row.gpay_and_expense ?? ''),
+      extra_charge:         String(row.extra_charge ?? ''),
+      return_amount:        String(row.return_amount ?? ''),
+      total_cash:           String(row.total_cash ?? ''),
+      total_cash_given:     String(row.total_cash_given ?? ''),
+      excess_deficit:       String(row.excess_deficit ?? ''),
+      notes:                row.notes ?? '',
+    };
+    setForm(f);
+    setIsEditing(true);
     setSaveErr('');
     setShowModal(true);
   }
@@ -168,7 +203,7 @@ export default function AccountsPage() {
       if (!res.ok) { setSaveErr(result.message || 'Save failed.'); return; }
       setShowModal(false);
       // Switch view to the saved entry's month so it's always visible
-      const savedDate = new Date(form.date + 'T00:00:00');
+      const savedDate  = new Date(form.date + 'T00:00:00');
       const savedYear  = savedDate.getFullYear();
       const savedMonth = savedDate.getMonth() + 1;
       setYear(savedYear);
@@ -183,8 +218,8 @@ export default function AccountsPage() {
   const labelCls = 'block text-xs font-medium text-slate-600 mb-1';
 
   // ── Table headers ──
-  const headers2026 = ['Date','Day','Medicine','OP#','OP Charges','Trip/Others','Total Sales','GPay','Expense','GPay+Exp','Extra','Return','Total Cash','Cash Given','Excess/Deficit','Notes'];
-  const headers2025 = ['Date','Day','Total Sale','OP Charges','Injection','Medicine','GPay','Expense','GPay+Exp','Extra','Return','Total Cash','Cash Given','Excess/Deficit','Notes'];
+  const headers2026 = ['','Date','Day','Medicine','OP#','OP Charges','Trip/Others','Total Sales','GPay','Expense','GPay+Exp','Extra','Return','Total Cash','Cash Given','Excess/Deficit','Notes'];
+  const headers2025 = ['','Date','Day','Total Sale','OP Charges','Injection','Medicine','GPay','Expense','GPay+Exp','Extra','Return','Total Cash','Cash Given','Excess/Deficit','Notes'];
 
   return (
     <div className="w-full max-w-[1800px] mx-auto px-4 py-6">
@@ -221,12 +256,14 @@ export default function AccountsPage() {
                   <option key={m.value} value={m.value}>{m.label}</option>
                 ))}
               </select>
-              <button
-                onClick={openModal}
-                className="flex items-center gap-2 rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700"
-              >
-                <PlusCircle size={18} /> Add Entry
-              </button>
+              {role === 'admin' && (
+                <button
+                  onClick={openModal}
+                  className="flex items-center gap-2 rounded-2xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700"
+                >
+                  <PlusCircle size={18} /> Add Entry
+                </button>
+              )}
             </div>
           </div>
 
@@ -244,19 +281,34 @@ export default function AccountsPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gradient-to-r from-slate-800 to-slate-700 text-white">
-                    {(isFY2025 ? headers2025 : headers2026).map(h => (
-                      <th key={h} className="whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">{h}</th>
+                    {(isFY2025 ? headers2025 : headers2026).map((h, i) => (
+                      <th key={i} className="whitespace-nowrap px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map(r => {
                     const ed = r.excess_deficit ?? 0;
-                    const rowBg  = ed < 0 ? 'bg-red-50' : ed > 0 ? 'bg-green-50' : '';
+                    const rowBg   = ed < 0 ? 'bg-red-50' : ed > 0 ? 'bg-green-50' : '';
                     const edColor = ed < 0 ? 'text-red-700 font-semibold' : ed > 0 ? 'text-green-700 font-semibold' : 'text-slate-500';
                     const dateStr = new Date(r.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
                     return (
                       <tr key={r.id} className={`border-b border-slate-100 ${rowBg} transition hover:brightness-95`}>
+                        {/* Edit button — admin only */}
+                        <td className="px-2 py-2">
+                          {role === 'admin' ? (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(r)}
+                              title="Edit this entry"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 transition-colors"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                          ) : (
+                            <div className="w-7" />
+                          )}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-2 font-medium text-slate-700">{dateStr}</td>
                         <td className="px-3 py-2 text-slate-500">{r.day_name ?? '—'}</td>
 
@@ -293,7 +345,7 @@ export default function AccountsPage() {
                 {rows.length > 0 && (
                   <tfoot>
                     <tr className="bg-slate-100 font-semibold text-slate-800 text-xs">
-                      <td className="px-3 py-3" colSpan={2}>TOTALS ({rows.length} days)</td>
+                      <td className="px-3 py-3" colSpan={3}>TOTALS ({rows.length} days)</td>
 
                       {isFY2025 ? (
                         <>
@@ -333,14 +385,21 @@ export default function AccountsPage() {
       </div>
       <BottomNav active="/accounts" />
 
-      {/* Add Entry Modal */}
+      {/* Add / Edit Entry Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8">
           <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-slate-900">Add Daily Entry</h2>
-                {isFY2025 && <p className="text-xs text-amber-600 mt-0.5">FY2025 format — includes Injection & Total Sale</p>}
+                <h2 className="text-xl font-semibold text-slate-900">
+                  {isEditing ? 'Edit Entry' : 'Add Daily Entry'}
+                </h2>
+                {isEditing && (
+                  <p className="text-xs text-brand-600 mt-0.5">
+                    Editing {new Date(form.date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                )}
+                {isFY2025 && <p className="text-xs text-amber-600 mt-0.5">FY2025 format — includes Injection &amp; Total Sale</p>}
               </div>
               <button onClick={() => setShowModal(false)} className="rounded-xl p-2 hover:bg-slate-100">
                 <X size={20} />
@@ -348,11 +407,12 @@ export default function AccountsPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {/* Common: Date & Day */}
+              {/* Date & Day */}
               <label className="block">
                 <span className={labelCls}>Date *</span>
                 <input type="date" value={form.date} onChange={e => set('date', e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+                  readOnly={isEditing}
+                  className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 ${isEditing ? 'bg-slate-100 cursor-not-allowed' : ''}`} />
               </label>
               <label className="block">
                 <span className={labelCls}>Day</span>
@@ -361,7 +421,6 @@ export default function AccountsPage() {
               </label>
 
               {isFY2025 ? (
-                /* ── FY2025 Fields ── */
                 <>
                   <label className="block">
                     <span className={labelCls}>Total Sale Amount</span>
@@ -381,7 +440,6 @@ export default function AccountsPage() {
                   </label>
                 </>
               ) : (
-                /* ── FY2026 Fields ── */
                 <>
                   <label className="block">
                     <span className={labelCls}>Medicine Sales</span>
@@ -396,7 +454,7 @@ export default function AccountsPage() {
                     <input type="number" min="0" value={form.total_op_charges ?? ''} onChange={e => set('total_op_charges', e.target.value)} className={inputCls} placeholder="0" />
                   </label>
                   <label className="block">
-                    <span className={labelCls}>Trip & Others</span>
+                    <span className={labelCls}>Trip &amp; Others</span>
                     <input type="number" min="0" value={form.trip_and_others ?? ''} onChange={e => set('trip_and_others', e.target.value)} className={inputCls} placeholder="0" />
                   </label>
                   <label className="block rounded-xl bg-slate-50 p-3">
@@ -457,7 +515,7 @@ export default function AccountsPage() {
               </button>
               <button onClick={handleSave} disabled={saving}
                 className="flex-1 rounded-2xl bg-brand-600 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50">
-                {saving ? 'Saving...' : 'Save Entry'}
+                {saving ? 'Saving...' : isEditing ? 'Update Entry' : 'Save Entry'}
               </button>
             </div>
           </div>

@@ -50,6 +50,7 @@ export const config = {
   matcher: [
     '/dashboard', '/entry', '/history', '/analytics', '/historical', '/accounts',
     '/audit', '/admin',
+    '/api/me',
     '/api/dashboard/:path*',
     '/api/entries/:path*',
     '/api/accounts/:path*',
