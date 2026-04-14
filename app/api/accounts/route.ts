@@ -72,11 +72,32 @@ export async function POST(request: Request) {
     row.total_sales          = Number(body.total_sales)          || 0;
   }
 
-  const { data, error } = await supabaseAdmin
+  // Check if a row already exists for this clinic + date
+  const { data: existing } = await supabaseAdmin
     .from('daily_accounts')
-    .upsert(row, { onConflict: 'clinic_id,date' })
-    .select()
-    .single();
+    .select('id')
+    .eq('clinic_id', CLINIC_ID)
+    .eq('date', body.date)
+    .maybeSingle();
+
+  let data, error;
+
+  if (existing?.id) {
+    // Update existing row
+    ({ data, error } = await supabaseAdmin
+      .from('daily_accounts')
+      .update(row)
+      .eq('id', existing.id)
+      .select()
+      .single());
+  } else {
+    // Insert new row
+    ({ data, error } = await supabaseAdmin
+      .from('daily_accounts')
+      .insert(row)
+      .select()
+      .single());
+  }
 
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
   return NextResponse.json({ data });

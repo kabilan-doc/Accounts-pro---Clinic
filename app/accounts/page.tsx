@@ -167,7 +167,13 @@ export default function AccountsPage() {
       const result = await res.json();
       if (!res.ok) { setSaveErr(result.message || 'Save failed.'); return; }
       setShowModal(false);
-      load(year, month);
+      // Switch view to the saved entry's month so it's always visible
+      const savedDate = new Date(form.date + 'T00:00:00');
+      const savedYear  = savedDate.getFullYear();
+      const savedMonth = savedDate.getMonth() + 1;
+      setYear(savedYear);
+      setMonth(savedMonth);
+      load(savedYear, savedMonth);
     } catch { setSaveErr('Network error.'); }
     finally { setSaving(false); }
   }
