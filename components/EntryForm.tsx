@@ -95,15 +95,14 @@ export function EntryForm() {
         return;
       }
 
-      // Also save daily summary to accounts table
-      const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
-      const dayName = days[new Date(date + 'T00:00:00').getDay()];
-      await fetch('/api/accounts', {
+      // NOTE: daily_accounts is managed separately via the Accounts page
+      // Do not auto-create rows here to avoid duplicate/incorrect entries
+      if (false) await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           date,
-          day_name:              dayName,
+          day_name:              '',
           total_medicine_sales:  n(med),
           no_of_op:              n(noOfOp),
           total_op_charges:      n(op),
