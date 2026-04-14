@@ -46,11 +46,13 @@ const EMPTY_FORM_2025 = {
   total_cash: '', total_cash_given: '', excess_deficit: '', notes: ''
 };
 
-const fmt = (n: number) =>
-  n === 0 ? '—' : n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const fmt = (n: number | null | undefined) =>
+  !n || n === 0 ? '—' : n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-const fmtED = (n: number) =>
-  n === 0 ? '0' : (n > 0 ? '+' : '') + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const fmtED = (n: number | null | undefined) => {
+  const v = n ?? 0;
+  return v === 0 ? '0' : (v > 0 ? '+' : '') + v.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+};
 
 function sum(rows: DailyAccount[], key: keyof DailyAccount): number {
   return rows.reduce((s, r) => s + Number(r[key] ?? 0), 0);
@@ -243,7 +245,7 @@ export default function AccountsPage() {
                 </thead>
                 <tbody>
                   {rows.map(r => {
-                    const ed = r.excess_deficit;
+                    const ed = r.excess_deficit ?? 0;
                     const rowBg  = ed < 0 ? 'bg-red-50' : ed > 0 ? 'bg-green-50' : '';
                     const edColor = ed < 0 ? 'text-red-700 font-semibold' : ed > 0 ? 'text-green-700 font-semibold' : 'text-slate-500';
                     const dateStr = new Date(r.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
