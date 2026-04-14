@@ -3,11 +3,6 @@
 import Link from 'next/link';
 import { Home, PlusCircle, FileText, BarChart3, ShieldCheck, ClipboardList, History, BookOpen, LogOut } from 'lucide-react';
 
-async function handleLogout() {
-  await fetch('/api/auth/logout', { method: 'POST' });
-  window.location.href = '/login';
-}
-
 export function Sidebar({ active }: { active: string }) {
   const items = [
     { href: '/dashboard',  label: 'Dashboard',   icon: Home },
@@ -20,15 +15,21 @@ export function Sidebar({ active }: { active: string }) {
     { href: '/admin',      label: 'Admin',        icon: ShieldCheck }
   ];
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login';
+  };
+
   return (
-    <aside className="hidden w-72 shrink-0 space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:block">
+    <aside className="hidden xl:flex w-72 shrink-0 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       {/* Clinic branding */}
-      <div className="rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-4 text-white">
+      <div className="rounded-t-2xl bg-gradient-to-br from-brand-600 to-brand-800 px-4 py-4 text-white shrink-0">
         <p className="text-xs font-semibold uppercase tracking-widest opacity-75">Dr. Kabilan's</p>
         <p className="mt-0.5 text-lg font-bold leading-tight">Clinic Accounts</p>
       </div>
 
-      <div>
+      {/* Nav */}
+      <div className="flex-1 overflow-y-auto p-4">
         <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-widest text-slate-400">Menu</p>
         <nav className="space-y-0.5">
           {items.map(item => {
@@ -55,14 +56,14 @@ export function Sidebar({ active }: { active: string }) {
         </nav>
       </div>
 
-      {/* Logout */}
-      <div className="mt-4 border-t border-white/20 pt-4">
+      {/* Logout — always pinned to bottom */}
+      <div className="shrink-0 border-t border-slate-200 p-3">
         <button
           type="button"
           onClick={handleLogout}
-          className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-red-300 transition-all duration-150 hover:bg-red-600 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition-all duration-150 hover:bg-red-600 hover:text-white"
         >
-          <LogOut className="h-[18px] w-[18px] shrink-0 transition-colors text-red-300 group-hover:text-white" />
+          <LogOut className="h-[18px] w-[18px] shrink-0" />
           Logout
         </button>
       </div>
