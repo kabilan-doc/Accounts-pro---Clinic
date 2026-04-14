@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ChevronDown, Delete } from 'lucide-react';
+import { DotMap } from '@/components/ui/travel-connect-signin-1';
 import { format } from 'date-fns';
 
 interface ProfileOption {
@@ -10,186 +12,216 @@ interface ProfileOption {
   role: 'admin' | 'staff';
 }
 
-const defaultProfiles: ProfileOption[] = [];
-
 export default function LoginPage() {
-  const [profiles, setProfiles] = useState<ProfileOption[]>(defaultProfiles);
+  const [profiles, setProfiles] = useState<ProfileOption[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<ProfileOption | null>(null);
   const [pin, setPin] = useState('');
-  const [adminMode, setAdminMode] = useState(false);
-  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    async function loadProfiles() {
-      try {
-        const res = await fetch('/api/profiles');
-        if (res.ok) {
-          const data = await res.json();
-          setProfiles(data.profiles || []);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-    loadProfiles();
+    fetch('/api/profiles')
+      .then(r => r.ok ? r.json() : { profiles: [] })
+      .then(d => setProfiles(d.profiles || []))
+      .catch(() => {});
   }, []);
 
-  const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+  const keypad = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
 
-  const handleKeyPress = (value: string) => {
+  const handleKey = (val: string) => {
+    if (val === '⌫') { setPin(p => p.slice(0, -1)); return; }
+    if (val === '') return;
     if (pin.length >= 4) return;
-    setPin(prev => prev + value);
+    setPin(p => p + val);
   };
 
   const handleSubmit = async () => {
     setError('');
-    if (!adminMode && !selectedProfile) {
-      setError('Select your name.');
-      return;
-    }
-    if (pin.length !== 4) {
-      setError('Enter a 4-digit PIN.');
-      return;
-    }
+    if (!selectedProfile) { setError('Select your name.'); return; }
+    if (pin.length !== 4) { setError('Enter your 4-digit PIN.'); return; }
     setLoading(true);
     try {
-      const body = adminMode ? { admin: true, pin } : { id: selectedProfile?.id, pin };
       const res = await fetch('/api/auth/pin-login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({ id: selectedProfile.id, pin }),
       });
       const result = await res.json();
-      if (!res.ok) {
-        setError(result?.message || 'Login failed.');
-      } else {
-        window.location.href = '/dashboard';
-      }
-    } catch (err) {
-      setError('Network error.');
-    } finally {
-      setLoading(false);
-    }
+      if (!res.ok) { setError(result?.message || 'Login failed.'); setPin(''); }
+      else { window.location.href = '/dashboard'; }
+    } catch { setError('Network error.'); }
+    finally { setLoading(false); }
   };
 
+  // Auto-submit when 4 digits entered
+  useEffect(() => {
+    if (pin.length === 4) handleSubmit();
+  }, [pin]);
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-slate-100 px-4 py-10 sm:px-6">
-      <div className="w-full max-w-2xl animate-slideUp rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 shadow-md">
-            <span className="text-2xl font-bold text-white">K</span>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-4xl overflow-hidden rounded-2xl flex bg-white shadow-xl"
+      >
+        {/* Left — animated dot map */}
+        <div className="hidden md:block w-1/2 relative overflow-hidden border-r border-gray-100" style={{ minHeight: 560 }}>
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100">
+            <DotMap />
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+                className="mb-5"
+              >
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 flex items-center justify-center shadow-lg shadow-blue-200">
+                  <span className="text-2xl font-bold text-white">K</span>
+                </div>
+              </motion.div>
+              <motion.h2
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65, duration: 0.5 }}
+                className="text-3xl font-bold mb-2 text-center text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-indigo-600"
+              >
+                Clinic Accounts
+              </motion.h2>
+              <motion.p
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8, duration: 0.5 }}
+                className="text-sm text-center text-gray-500 max-w-xs"
+              >
+                Dr. Kabilan's Clinic — Staff Portal
+              </motion.p>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1, duration: 0.5 }}
+                className="mt-6 text-xs text-gray-400"
+              >
+                {format(new Date(), 'EEEE, d MMMM yyyy')}
+              </motion.p>
+            </div>
           </div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand-600">Dr. Kabilan's Clinic</p>
-          <h1 className="mt-2 text-2xl font-bold text-slate-900">Staff Login</h1>
-          <p className="mt-1 text-sm text-slate-500">Select your name and enter your 4-digit PIN.</p>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">User</label>
-              <div className="relative">
-                <button
-                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-left"
-                  type="button"
-                  onClick={() => setDropdownOpen(prev => !prev)}
+        {/* Right — PIN login */}
+        <div className="w-full md:w-1/2 p-8 md:p-10 flex flex-col justify-center bg-white">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Welcome back</h1>
+              <p className="text-gray-500 mt-1 text-sm">Select your name and enter your PIN</p>
+            </div>
+
+            {/* Profile selector */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+              <button
+                type="button"
+                onClick={() => setDropdownOpen(o => !o)}
+                className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-100 transition-colors"
+              >
+                <span className={selectedProfile ? 'text-gray-800 font-medium' : 'text-gray-400'}>
+                  {selectedProfile?.full_name || 'Select your name…'}
+                </span>
+                <ChevronDown size={16} className="text-gray-400" />
+              </button>
+              {dropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute left-0 right-0 z-20 mt-1 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
                 >
-                  <span>{selectedProfile?.full_name || 'Select your name'}</span>
-                  <ChevronDown size={18} />
-                </button>
-                {dropdownOpen && (
-                  <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-slate-200 bg-white shadow-lg">
-                    {profiles.map(profile => (
-                      <button
-                        key={profile.id}
-                        type="button"
-                        className="block w-full px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50"
-                        onClick={() => {
-                          setSelectedProfile(profile);
-                          setDropdownOpen(false);
-                        }}
-                      >
-                        {profile.full_name}
-                      </button>
-                    ))}
-                    {!profiles.length && <div className="px-4 py-3 text-sm text-slate-500">Loading staff...</div>}
-                  </div>
-                )}
+                  {profiles.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="flex w-full items-center justify-between px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                      onClick={() => { setSelectedProfile(p); setDropdownOpen(false); setPin(''); setError(''); }}
+                    >
+                      <span>{p.full_name}</span>
+                      <span className="text-xs capitalize text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{p.role}</span>
+                    </button>
+                  ))}
+                  {!profiles.length && <div className="px-4 py-3 text-sm text-gray-400">Loading…</div>}
+                </motion.div>
+              )}
+            </div>
+
+            {/* PIN dots */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">4-digit PIN</label>
+              <div className="flex items-center justify-center gap-4 rounded-xl border border-gray-200 bg-gray-50 py-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    animate={{ scale: i < pin.length ? 1.2 : 1 }}
+                    transition={{ duration: 0.1 }}
+                    className={`h-4 w-4 rounded-full transition-all duration-150 ${
+                      i < pin.length ? 'bg-brand-600' : 'bg-gray-300'
+                    }`}
+                  />
+                ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Mode</label>
-              <button
-                type="button"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-slate-700"
-                onClick={() => setAdminMode(prev => !prev)}
-              >
-                {adminMode ? '🔐 Admin PIN mode' : 'Staff PIN login'}
-              </button>
-            </div>
-          </div>
 
-          {adminMode && (
-            <div className="rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-700">
-              Admin mode — enter your 4-digit admin PIN below.
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700">4-digit PIN</label>
-            <div className="flex h-14 items-center justify-center gap-3 rounded-xl border border-slate-200 bg-slate-50">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div
+            {/* Keypad */}
+            <div className="grid grid-cols-3 gap-2">
+              {keypad.map((k, i) => (
+                <motion.button
                   key={i}
-                  className={`h-4 w-4 rounded-full transition-all duration-150 ${
-                    i < pin.length
-                      ? 'scale-110 bg-brand-600'
-                      : 'bg-slate-300'
+                  type="button"
+                  whileTap={{ scale: 0.92 }}
+                  onClick={() => handleKey(k)}
+                  disabled={k === ''}
+                  className={`rounded-xl border py-3.5 text-lg font-semibold transition-all duration-100 ${
+                    k === '⌫'
+                      ? 'border-red-100 bg-red-50 text-red-500 hover:bg-red-100'
+                      : k === ''
+                      ? 'invisible'
+                      : 'border-gray-200 bg-gray-50 text-gray-800 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700'
                   }`}
-                />
+                >
+                  {k === '⌫' ? <Delete size={18} className="mx-auto" /> : k}
+                </motion.button>
               ))}
             </div>
-          </div>
 
-          <div className="grid grid-cols-3 gap-2.5">
-            {keypad.map(item => (
-              <button
-                key={item}
-                type="button"
-                className="rounded-xl border border-slate-200 bg-slate-50 py-4 text-xl font-semibold text-slate-900 transition-all duration-100 hover:bg-slate-100 active:scale-95 active:bg-slate-200"
-                onClick={() => handleKeyPress(item)}
+            {/* Error */}
+            {error && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-sm text-red-600 text-center"
               >
-                {item}
-              </button>
-            ))}
-          </div>
+                {error}
+              </motion.p>
+            )}
 
-          <div className="flex items-center justify-between gap-3">
-            <button
+            {/* Sign in button */}
+            <motion.button
               type="button"
-              className="flex-1 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              onClick={() => setPin('')}
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              className="flex-1 rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleSubmit}
-              disabled={loading}
+              disabled={loading || pin.length !== 4 || !selectedProfile}
+              className="w-full rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow hover:from-brand-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <p className="text-sm text-slate-500">{format(new Date(), 'eeee, d MMMM yyyy')}</p>
+              {loading ? 'Signing in…' : 'Sign In'}
+            </motion.button>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </main>
   );
 }
