@@ -164,20 +164,23 @@ export async function GET(request: Request) {
     monthExpFinal += Number(da.expense ?? 0);
   }
 
-  return NextResponse.json({
-    today: {
-      income:  todayIncFinal,
-      expense: todayExpFinal,
-      net:     todayIncFinal - todayExpFinal,
-      cash:    todayCashFinal,
-      upi:     todayUPIFinal,
-      card:    todayCard,
-      count:   todayAll.length,
+  return NextResponse.json(
+    {
+      today: {
+        income:  todayIncFinal,
+        expense: todayExpFinal,
+        net:     todayIncFinal - todayExpFinal,
+        cash:    todayCashFinal,
+        upi:     todayUPIFinal,
+        card:    todayCard,
+        count:   todayAll.length,
+      },
+      week:  { income: weekInc,       expense: weekExp,       net: weekInc       - weekExp       },
+      month: { income: monthIncFinal, expense: monthExpFinal, net: monthIncFinal - monthExpFinal },
+      dailyBreakdown,
+      monthIncomeByCategory,
+      monthExpenseByCategory,
     },
-    week:  { income: weekInc,       expense: weekExp,       net: weekInc       - weekExp       },
-    month: { income: monthIncFinal, expense: monthExpFinal, net: monthIncFinal - monthExpFinal },
-    dailyBreakdown,
-    monthIncomeByCategory,
-    monthExpenseByCategory,
-  });
+    { headers: { 'Cache-Control': 'private, max-age=60, stale-while-revalidate=300' } }
+  );
 }

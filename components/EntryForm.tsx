@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 function fmt(n: number) {
   return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -42,6 +42,7 @@ export function EntryForm() {
 
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
+  const messageRef = useRef<HTMLDivElement>(null);
 
   const n = (v: string) => parseFloat(v) || 0;
 
@@ -79,19 +80,20 @@ export function EntryForm() {
     if (n(returns) > 0) entries.push({ entry_date: date, entry_type: 'expense', category: 'Returns',       payment_mode: 'Cash', amount: n(returns), description: src });
 
     try {
-      // Save individual entries
+      // Save individual entries — check HTTP status, not response body
       const results = await Promise.all(
         entries.map(e =>
           fetch('/api/entries', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
             body: JSON.stringify(e)
-          }).then(r => r.json())
+          }).then(async r => ({ ok: r.ok, data: await r.json() }))
         )
       );
-      const failed = results.filter((r: any) => r.error || r.message?.includes('error'));
+      const failed = results.filter(r => !r.ok);
       if (failed.length) {
-        setMessage({ text: 'Some entries failed. Check network.', ok: false });
+        setMessage({ text: `${failed.length} of ${entries.length} entries failed to save. Please retry.`, ok: false });
+        setTimeout(() => messageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
         return;
       }
 
@@ -122,12 +124,14 @@ export function EntryForm() {
         })
       });
 
-      setMessage({ text: `Saved ${entries.length} entries for ${date}.`, ok: true });
+      setMessage({ text: `✓ Saved ${entries.length} entries for ${date}.`, ok: true });
       setOp(''); setMed(''); setTrip(''); setExtra('');
       setGpay(''); setExpense(''); setReturns('');
       setNoOfOp(''); setCashGiven(''); setNotes('');
+      setTimeout(() => messageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
     } catch {
-      setMessage({ text: 'Network error.', ok: false });
+      setMessage({ text: 'Network error. Check your connection and retry.', ok: false });
+      setTimeout(() => messageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
     } finally {
       setLoading(false);
     }
@@ -335,9 +339,16 @@ export function EntryForm() {
       </button>
 
       {message && (
-        <p className={`text-sm font-medium ${message.ok ? 'text-green-700' : 'text-red-600'}`}>
+        <div
+          ref={messageRef}
+          className={`rounded-2xl px-5 py-4 text-sm font-medium ${
+            message.ok
+              ? 'bg-green-50 border border-green-200 text-green-700'
+              : 'bg-red-50 border border-red-200 text-red-700'
+          }`}
+        >
           {message.text}
-        </p>
+        </div>
       )}
     </div>
   );

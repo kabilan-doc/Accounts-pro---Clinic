@@ -26,7 +26,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ message: 'Entry not found.' }, { status: 404 });
   }
 
-  const isSameDay = new Date(existing.entry_date).toDateString() === new Date().toDateString();
+  const todayStr = new Date().toISOString().substring(0, 10);
+  const isSameDay = String(existing.entry_date).substring(0, 10) === todayStr;
   if (session.role !== 'admin' && existing.entered_by !== session.id) {
     return NextResponse.json({ message: 'Cannot void others entries.' }, { status: 403 });
   }

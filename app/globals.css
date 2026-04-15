@@ -95,6 +95,17 @@ input[type=number]::-webkit-outer-spin-button {
 }
 input[type=number] { -moz-appearance: textfield; }
 
+/* ── Tabular numbers for monetary values (prevents layout shift) ── */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── Disable card hover shadow on touch devices (no hover intent) ── */
+@media (hover: none) {
+  .card:hover { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+}
+
+/* ── Selection colour ── */
+::selection { background: #bfdbfe; color: #1e3a8a; }
+
 .text-muted { @apply text-slate-500; }
 
 /* ── Safe area for iOS notch / home indicator ── */

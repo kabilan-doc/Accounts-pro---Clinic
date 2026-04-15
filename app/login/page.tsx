@@ -54,9 +54,9 @@ export default function LoginPage() {
     finally { setLoading(false); }
   };
 
-  // Auto-submit when 4 digits entered
+  // Auto-submit when 4 digits entered (guard against double-submit while loading)
   useEffect(() => {
-    if (pin.length === 4) handleSubmit();
+    if (pin.length === 4 && !loading) handleSubmit();
   }, [pin]);
 
   return (

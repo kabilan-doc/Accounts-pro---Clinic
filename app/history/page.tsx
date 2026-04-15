@@ -33,7 +33,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
 
-  const buildQS = useCallback((p = page) => {
+  const buildQS = useCallback((p: number) => {
     const params = new URLSearchParams({ page: String(p) });
     if (startDate)   params.set('start_date',   startDate);
     if (endDate)     params.set('end_date',     endDate);
@@ -41,9 +41,9 @@ export default function HistoryPage() {
     if (category)    params.set('category',     category);
     if (paymentMode) params.set('payment_mode', paymentMode);
     return params.toString();
-  }, [page, startDate, endDate, entryType, category, paymentMode]);
+  }, [startDate, endDate, entryType, category, paymentMode]);
 
-  const load = useCallback(async (p = page) => {
+  const load = useCallback(async (p: number) => {
     setLoading(true);
     setError('');
     try {
@@ -57,26 +57,32 @@ export default function HistoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [buildQS, page]);
+  }, [buildQS]);
 
-  useEffect(() => { load(1); setPage(1); }, [startDate, endDate, entryType, category, paymentMode]);
-  useEffect(() => { load(page); }, [page]);
+  // When filters change: reset to page 1 and reload
+  useEffect(() => { setPage(1); load(1); }, [startDate, endDate, entryType, category, paymentMode]);
 
   const handlePageChange = (p: number) => { setPage(p); load(p); };
 
   // ── exports ────────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+
   const exportCSV = () => {
+    setExporting('csv');
     const qs = new URLSearchParams();
     if (startDate) qs.set('start_date', startDate);
     if (endDate)   qs.set('end_date',   endDate);
     window.open(`/api/export/csv?${qs}`, '_blank');
+    setTimeout(() => setExporting(null), 2000);
   };
 
   const exportPDF = () => {
+    setExporting('pdf');
     const qs = new URLSearchParams();
     if (startDate) qs.set('start_date', startDate);
     if (endDate)   qs.set('end_date',   endDate);
     window.open(`/api/export/pdf?${qs}`, '_blank');
+    setTimeout(() => setExporting(null), 2000);
   };
 
   return (
@@ -102,16 +108,20 @@ export default function HistoryPage() {
               <button
                 type="button"
                 onClick={exportCSV}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
+                disabled={exporting !== null}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
               >
-                <Download size={15} /> CSV
+                <Download size={15} className={exporting === 'csv' ? 'animate-bounce' : ''} />
+                {exporting === 'csv' ? 'Exporting…' : 'CSV'}
               </button>
               <button
                 type="button"
                 onClick={exportPDF}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50"
+                disabled={exporting !== null}
+                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-60"
               >
-                <FileText size={15} /> PDF
+                <FileText size={15} className={exporting === 'pdf' ? 'animate-bounce' : ''} />
+                {exporting === 'pdf' ? 'Exporting…' : 'PDF'}
               </button>
             </div>
           </div>
@@ -193,7 +203,15 @@ export default function HistoryPage() {
           {/* ── table ── */}
           <div className="space-y-3">
             {loading ? (
-              <div className="h-60 animate-pulse rounded-3xl bg-slate-100" />
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="skeleton h-14 rounded-2xl sm:h-11"
+                    style={{ animationDelay: `${i * 50}ms` }}
+                  />
+                ))}
+              </div>
             ) : (
               <EntryTable
                 entries={entries}
