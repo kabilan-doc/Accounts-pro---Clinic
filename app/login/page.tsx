@@ -158,11 +158,11 @@ export default function LoginPage() {
                     <button
                       key={p.id}
                       type="button"
-                      className="flex w-full items-center justify-between px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                      className="flex w-full items-center justify-between bg-white px-4 py-3 text-sm text-gray-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                       onClick={() => { setSelectedProfile(p); setDropdownOpen(false); setPin(''); setError(''); }}
                     >
                       <span>{p.full_name}</span>
-                      <span className="text-xs capitalize text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{p.role}</span>
+                      <span className="text-xs capitalize text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{p.role}</span>
                     </button>
                   ))}
                   {!profiles.length && <div className="px-4 py-3 text-sm text-gray-400">Loading…</div>}
