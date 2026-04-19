@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   // Fetch from account_entries (detailed per-entry rows)
   const { data: entries, error } = await supabaseAdmin
     .from('account_entries')
-    .select('entry_date, entry_type, category, payment_mode, amount')
+    .select('entry_date, entry_type, category, subcategory, payment_mode, amount')
     .gte('entry_date', startDate)
     .lte('entry_date', todayStr)
     .eq('is_voided', false)
@@ -60,33 +60,37 @@ export async function GET(request: Request) {
   const sum = (rows: typeof e, key: 'amount') =>
     rows.reduce((s, r) => s + Number(r[key]), 0);
 
+  // GPay subcategory = payment mode indicator already included in sales — exclude from income sums
+  const isGPay = (r: { entry_type: string; subcategory: string | null }) =>
+    r.entry_type === 'income' && r.subcategory === 'GPay';
+
   // ── today ─────────────────────────────────────────────────────────────
   const todayAll  = e.filter(r => r.entry_date === todayStr);
-  const todayInc  = sum(todayAll.filter(r => r.entry_type === 'income'), 'amount');
-  const todayExp  = sum(todayAll.filter(r => r.entry_type === 'expense'), 'amount');
-  const todayCash = sum(todayAll.filter(r => r.payment_mode === 'Cash'), 'amount');
-  const todayUPI  = sum(todayAll.filter(r => r.payment_mode === 'UPI'), 'amount');
-  const todayCard = sum(todayAll.filter(r => r.payment_mode === 'Card'), 'amount');
+  const todayReal = todayAll.filter(r => !isGPay(r)); // non-GPay entries
+  const todayInc  = sum(todayReal.filter(r => r.entry_type === 'income'), 'amount');
+  const todayExp  = sum(todayReal.filter(r => r.entry_type === 'expense'), 'amount');
+  const todayCard = sum(todayReal.filter(r => r.payment_mode === 'Card'), 'amount');
 
-  // If today has no account_entries, fall back to daily_accounts
+  // Prefer daily_accounts for UPI/cash (accurate, reconciled by user)
   const todayDA = (dailyAccRows ?? []).find(r => r.date === todayStr);
-  const todayIncFinal  = todayAll.length > 0 ? todayInc  : (todayDA ? daIncome(todayDA) : 0);
-  const todayExpFinal  = todayAll.length > 0 ? todayExp  : (todayDA ? Number(todayDA.expense ?? 0) : 0);
-  const todayCashFinal = todayAll.length > 0 ? todayCash : (todayDA ? Number(todayDA.total_cash ?? 0) : 0);
-  const todayUPIFinal  = todayAll.length > 0 ? todayUPI  : (todayDA ? Number(todayDA.gpay ?? 0) : 0);
+  const hasRealTodayEntries = todayReal.length > 0;
+  const todayIncFinal  = hasRealTodayEntries ? todayInc  : (todayDA ? daIncome(todayDA) : 0);
+  const todayExpFinal  = hasRealTodayEntries ? todayExp  : (todayDA ? Number(todayDA.expense ?? 0) : 0);
+  const todayCashFinal = todayDA ? Number(todayDA.total_cash ?? 0) : sum(todayReal.filter(r => r.payment_mode === 'Cash'), 'amount');
+  const todayUPIFinal  = todayDA ? Number(todayDA.gpay ?? 0) : 0;
 
   // ── this week ─────────────────────────────────────────────────────────
   const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - dow);
   const weekStartStr = weekStart.toISOString().substring(0, 10);
-  const weekAll = e.filter(r => r.entry_date >= weekStartStr);
+  const weekAll = e.filter(r => r.entry_date >= weekStartStr && !isGPay(r));
   const weekInc = sum(weekAll.filter(r => r.entry_type === 'income'), 'amount');
   const weekExp = sum(weekAll.filter(r => r.entry_type === 'expense'), 'amount');
 
   // ── this month ────────────────────────────────────────────────────────
   const monthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
-  const monthAll = e.filter(r => r.entry_date >= monthStr);
+  const monthAll = e.filter(r => r.entry_date >= monthStr && !isGPay(r));
   const monthInc = sum(monthAll.filter(r => r.entry_type === 'income'), 'amount');
   const monthExp = sum(monthAll.filter(r => r.entry_type === 'expense'), 'amount');
 
@@ -103,9 +107,10 @@ export async function GET(request: Request) {
     };
   }
 
-  // Fill from account_entries
+  // Fill from account_entries — GPay subcategory excluded (payment mode indicator, not extra income)
   for (const r of e) {
     if (!dateMap[r.entry_date]) continue;
+    if (isGPay(r)) continue;
     dateMap[r.entry_date].count++;
     if (r.entry_type === 'income')  dateMap[r.entry_date].income  += Number(r.amount);
     if (r.entry_type === 'expense') dateMap[r.entry_date].expense += Number(r.amount);
@@ -114,18 +119,24 @@ export async function GET(request: Request) {
     if (r.payment_mode === 'Card')  dateMap[r.entry_date].card    += Number(r.amount);
   }
 
-  // Fallback: fill zero-count dates from daily_accounts
+  // Overlay UPI/cash from daily_accounts (user-reconciled values) for all dates that have DA data
   for (const da of (dailyAccRows ?? [])) {
     if (!dateMap[da.date]) continue;
-    if (dateMap[da.date].count > 0) continue; // account_entries takes priority
-    const income = daIncome(da);
-    const expense = Number(da.expense ?? 0);
-    if (income === 0 && expense === 0) continue;
-    dateMap[da.date].income  = income;
-    dateMap[da.date].expense = expense;
-    dateMap[da.date].cash    = Number(da.total_cash ?? 0);
-    dateMap[da.date].upi     = Number(da.gpay ?? 0);
-    dateMap[da.date].count   = -1; // marker: sourced from daily_accounts
+    if (dateMap[da.date].count > 0) {
+      // Has real account_entries — income/expense already correct; use DA for accurate UPI/cash
+      dateMap[da.date].upi  = Number(da.gpay ?? 0);
+      dateMap[da.date].cash = Number(da.total_cash ?? 0);
+    } else {
+      // No account_entries for this date — fall back entirely to daily_accounts
+      const income = daIncome(da);
+      const expense = Number(da.expense ?? 0);
+      if (income === 0 && expense === 0) continue;
+      dateMap[da.date].income  = income;
+      dateMap[da.date].expense = expense;
+      dateMap[da.date].cash    = Number(da.total_cash ?? 0);
+      dateMap[da.date].upi     = Number(da.gpay ?? 0);
+      dateMap[da.date].count   = -1; // marker: sourced from daily_accounts
+    }
   }
 
   const dailyBreakdown = Object.entries(dateMap).map(([date, s]) => ({
@@ -152,14 +163,14 @@ export async function GET(request: Request) {
     }
   }
 
-  // Supplement month totals with daily_accounts fallback
+  // Supplement month totals with daily_accounts for dates with no real account_entries
   let monthIncFinal = monthInc;
   let monthExpFinal = monthExp;
   for (const da of (dailyAccRows ?? [])) {
     if (da.date < monthStr) continue;
-    // Only add if this date had no account_entries
-    const hasEntries = e.some(r => r.entry_date === da.date);
-    if (hasEntries) continue;
+    // "real entries" = non-GPay entries (GPay-only dates should fall back to daily_accounts)
+    const hasRealEntries = e.some(r => r.entry_date === da.date && !isGPay(r));
+    if (hasRealEntries) continue;
     monthIncFinal += daIncome(da);
     monthExpFinal += Number(da.expense ?? 0);
   }

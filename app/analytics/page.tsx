@@ -56,6 +56,7 @@ export default function AnalyticsPage() {
     entry_date: string;
     entry_type: 'income' | 'expense';
     category: string;
+    subcategory: string | null;
     payment_mode: string;
     amount: number;
   }>>([]);
@@ -100,15 +101,16 @@ export default function AnalyticsPage() {
   useEffect(() => { load(); }, [load]);
 
   // ── derived data ────────────────────────────────────────────────────────
-  const incomeEntries  = entries.filter(e => e.entry_type === 'income');
+  // Exclude GPay subcategory — it's a payment mode indicator already included in sales totals
+  const incomeEntries  = entries.filter(e => e.entry_type === 'income' && e.subcategory !== 'GPay');
   const expenseEntries = entries.filter(e => e.entry_type === 'expense');
 
   const totalIncome  = incomeEntries.reduce((s, e) => s + Number(e.amount), 0);
   const totalExpense = expenseEntries.reduce((s, e) => s + Number(e.amount), 0);
 
-  // Daily breakdown for trend chart
+  // Daily breakdown for trend chart (GPay excluded from income)
   const dateMap: Record<string, DailyPoint> = {};
-  for (const e of entries) {
+  for (const e of [...incomeEntries, ...expenseEntries]) {
     if (!dateMap[e.entry_date]) {
       dateMap[e.entry_date] = { date: e.entry_date, income: 0, expense: 0, net: 0, cash: 0, upi: 0, card: 0, count: 0 };
     }
@@ -134,9 +136,9 @@ export default function AnalyticsPage() {
   const expCatPoints: CategoryPoint[] = Object.entries(expByCat)
     .map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
-  // Payment mode
+  // Payment mode (GPay excluded — it's not a separate income source)
   const byMode: Record<string, number> = {};
-  for (const e of entries) byMode[e.payment_mode] = (byMode[e.payment_mode] ?? 0) + Number(e.amount);
+  for (const e of [...incomeEntries, ...expenseEntries]) byMode[e.payment_mode] = (byMode[e.payment_mode] ?? 0) + Number(e.amount);
   const modePoints: CategoryPoint[] = Object.entries(byMode)
     .map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
@@ -160,7 +162,8 @@ export default function AnalyticsPage() {
   const uniqueDays = dailyPoints.filter(d => d.income > 0 || d.expense > 0).length || 1;
   const avgDailyIncome  = totalIncome  / uniqueDays;
   const avgDailyExpense = totalExpense / uniqueDays;
-  const cashTotal  = entries.filter(e => e.payment_mode === 'Cash').reduce((s, e) => s + Number(e.amount), 0);
+  const allReal = [...incomeEntries, ...expenseEntries];
+  const cashTotal    = allReal.filter(e => e.payment_mode === 'Cash').reduce((s, e) => s + Number(e.amount), 0);
   const digitalTotal = (totalIncome + totalExpense) - cashTotal;
 
   const PERIODS: { key: Period; label: string }[] = [

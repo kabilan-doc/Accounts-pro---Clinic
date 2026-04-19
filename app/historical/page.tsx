@@ -84,8 +84,12 @@ async function fetchMonthStats(fy: number, month: string): Promise<MonthStats> {
   }
 
   const active = allEntries.filter((e: { is_voided: boolean }) => !e.is_voided);
-  const inc  = active.filter((e: { entry_type: string }) => e.entry_type === 'income');
+  // Exclude GPay subcategory — it's a payment mode indicator already counted in sales
+  const isGPay = (e: { entry_type: string; subcategory?: string }) =>
+    e.entry_type === 'income' && e.subcategory === 'GPay';
+  const inc  = active.filter((e: { entry_type: string; subcategory?: string }) => e.entry_type === 'income' && !isGPay(e));
   const exp  = active.filter((e: { entry_type: string }) => e.entry_type === 'expense');
+  const real = [...inc, ...exp];
   const s    = (arr: { amount: number | string }[]) => arr.reduce((x, e) => x + Number(e.amount), 0);
 
   return {
@@ -93,9 +97,9 @@ async function fetchMonthStats(fy: number, month: string): Promise<MonthStats> {
     income:  s(inc),
     expense: s(exp),
     net:     s(inc) - s(exp),
-    cash:    s(active.filter((e: { payment_mode: string }) => e.payment_mode === 'Cash')),
-    upi:     s(active.filter((e: { payment_mode: string }) => e.payment_mode === 'UPI')),
-    entries: active.length,
+    cash:    s(real.filter((e: { payment_mode: string }) => e.payment_mode === 'Cash')),
+    upi:     s(real.filter((e: { payment_mode: string }) => e.payment_mode === 'UPI')),
+    entries: real.length,
     consultation: s(inc.filter((e: { category: string }) => e.category === 'Consultation')),
     pharmacy:     s(inc.filter((e: { category: string }) => e.category === 'Pharmacy Sales')),
     procedure:    s(inc.filter((e: { category: string }) => e.category === 'Procedure')),
@@ -141,15 +145,17 @@ async function fetchDayStats(start: string, end: string): Promise<DayStats[]> {
 
   return Object.keys(byDate).sort().map(date => {
     const entries = byDate[date];
-    const inc = entries.filter((e: any) => e.entry_type === 'income');
+    // Exclude GPay subcategory — payment mode indicator, not additional income
+    const inc = entries.filter((e: any) => e.entry_type === 'income' && e.subcategory !== 'GPay');
     const exp = entries.filter((e: any) => e.entry_type === 'expense');
+    const real = [...inc, ...exp];
     return {
       date,
       income:       s(inc),
       expense:      s(exp),
       net:          s(inc) - s(exp),
-      cash:         s(entries.filter((e: any) => e.payment_mode === 'Cash'  && e.entry_type === 'income')),
-      upi:          s(entries.filter((e: any) => e.payment_mode === 'UPI'   && e.entry_type === 'income')),
+      cash:         s(real.filter((e: any) => e.payment_mode === 'Cash')),
+      upi:          s(real.filter((e: any) => e.payment_mode === 'UPI')),
       consultation: s(inc.filter((e: any) => e.category === 'Consultation')),
       pharmacy:     s(inc.filter((e: any) => e.category === 'Pharmacy Sales')),
       procedure:    s(inc.filter((e: any) => e.category === 'Procedure')),

@@ -73,8 +73,8 @@ export function EntryForm() {
     if (n(trip)  > 0) entries.push({ entry_date: date, entry_type: 'income', category: 'Other Income',   payment_mode: 'Cash', amount: n(trip),  description: src, subcategory: 'Trip/Others' });
     if (n(extra) > 0) entries.push({ entry_date: date, entry_type: 'income', category: 'Other Income',   payment_mode: 'Cash', amount: n(extra), description: src, subcategory: 'Extra Charge' });
 
-    // GPay: record as UPI income so payment-mode totals are correct
-    if (n(gpay) > 0) entries.push({ entry_date: date, entry_type: 'income', category: 'Other Income', payment_mode: 'UPI', amount: n(gpay), description: `${src} — GPay collected`, subcategory: 'GPay' });
+    // GPay is a payment mode indicator (already included in medicine/OP/trip sales),
+    // NOT additional income — do not create a separate income entry for it.
 
     if (n(expense) > 0) entries.push({ entry_date: date, entry_type: 'expense', category: 'Miscellaneous', payment_mode: 'Cash', amount: n(expense), description: src });
     if (n(returns) > 0) entries.push({ entry_date: date, entry_type: 'expense', category: 'Returns',       payment_mode: 'Cash', amount: n(returns), description: src });
