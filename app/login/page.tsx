@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ChevronDown, Delete } from 'lucide-react';
 import { DotMap } from '@/components/ui/travel-connect-signin-1';
@@ -78,8 +79,8 @@ export default function LoginPage() {
                 transition={{ delay: 0.5, duration: 0.5 }}
                 className="mb-5"
               >
-                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 flex items-center justify-center shadow-lg shadow-blue-200">
-                  <span className="text-2xl font-bold text-white">K</span>
+                <div className="h-20 w-20 rounded-2xl bg-white flex items-center justify-center shadow-lg shadow-blue-200 overflow-hidden">
+                  <Image src="/clinic-logo.png" alt="Clinic Logo" width={80} height={80} className="object-contain" priority />
                 </div>
               </motion.div>
               <motion.h2
@@ -118,6 +119,17 @@ export default function LoginPage() {
             transition={{ duration: 0.5 }}
             className="space-y-6"
           >
+            {/* Logo — shown on mobile where left panel is hidden */}
+            <div className="flex items-center gap-3 md:hidden">
+              <div className="h-12 w-12 rounded-xl overflow-hidden shadow-sm border border-slate-100 flex items-center justify-center bg-white">
+                <Image src="/clinic-logo.png" alt="Clinic Logo" width={48} height={48} className="object-contain" priority />
+              </div>
+              <div>
+                <p className="font-bold text-gray-800 text-base leading-tight">Clinic Accounts</p>
+                <p className="text-xs text-gray-400">Dr. Kabilan&apos;s Clinic</p>
+              </div>
+            </div>
+
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Welcome back</h1>
               <p className="text-gray-500 mt-1 text-sm">Select your name and enter your PIN</p>
