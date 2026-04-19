@@ -45,21 +45,16 @@ function periodDates(period: Period, customStart: string, customEnd: string): [s
 }
 
 export default function AnalyticsPage() {
-  const [period,       setPeriod]       = useState<Period>('month');
-  const [customStart,  setCustomStart]  = useState('');
-  const [customEnd,    setCustomEnd]    = useState('');
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState('');
+  const [period,      setPeriod]      = useState<Period>('month');
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd,   setCustomEnd]   = useState('');
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
 
-  // raw entries
-  const [entries, setEntries] = useState<Array<{
-    entry_date: string;
-    entry_type: 'income' | 'expense';
-    category: string;
-    subcategory: string | null;
-    payment_mode: string;
-    amount: number;
-  }>>([]);
+  const [dailyPoints,  setDailyPoints]  = useState<DailyPoint[]>([]);
+  const [incByCat,     setIncByCat]     = useState<Record<string, number>>({});
+  const [expByCat,     setExpByCat]     = useState<Record<string, number>>({});
+  const [modeMap,      setModeMap]      = useState<Record<string, number>>({});
 
   const load = useCallback(async () => {
     const [start, end] = periodDates(period, customStart, customEnd);
@@ -68,29 +63,13 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError('');
     try {
-      // Fetch all entries for the period (no pagination, use large range)
-      const res = await fetch(
-        `/api/entries?start_date=${start}&end_date=${end}&page=1`
-      );
+      const res = await fetch(`/api/analytics?start_date=${start}&end_date=${end}`);
       if (!res.ok) throw new Error('Failed to load analytics data');
       const data = await res.json();
-
-      // Fetch additional pages if needed
-      const allEntries = [...(data.entries ?? [])];
-      const total = data.count ?? 0;
-      const pages = Math.ceil(total / 20);
-      if (pages > 1) {
-        const rest = await Promise.all(
-          Array.from({ length: pages - 1 }, (_, i) =>
-            fetch(`/api/entries?start_date=${start}&end_date=${end}&page=${i + 2}`)
-              .then(r => r.json())
-              .then(d => d.entries ?? [])
-          )
-        );
-        rest.forEach(pg => allEntries.push(...pg));
-      }
-
-      setEntries(allEntries.filter((e: { is_voided: boolean }) => !e.is_voided));
+      setDailyPoints(data.dailyPoints ?? []);
+      setIncByCat(data.incByCat ?? {});
+      setExpByCat(data.expByCat ?? {});
+      setModeMap(data.modeMap ?? {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error');
     } finally {
@@ -100,54 +79,24 @@ export default function AnalyticsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── derived data ────────────────────────────────────────────────────────
-  // Exclude GPay subcategory — it's a payment mode indicator already included in sales totals
-  const incomeEntries  = entries.filter(e => e.entry_type === 'income' && e.subcategory !== 'GPay');
-  const expenseEntries = entries.filter(e => e.entry_type === 'expense');
-
-  const totalIncome  = incomeEntries.reduce((s, e) => s + Number(e.amount), 0);
-  const totalExpense = expenseEntries.reduce((s, e) => s + Number(e.amount), 0);
-
-  // Daily breakdown for trend chart (GPay excluded from income)
-  const dateMap: Record<string, DailyPoint> = {};
-  for (const e of [...incomeEntries, ...expenseEntries]) {
-    if (!dateMap[e.entry_date]) {
-      dateMap[e.entry_date] = { date: e.entry_date, income: 0, expense: 0, net: 0, cash: 0, upi: 0, card: 0, count: 0 };
-    }
-    dateMap[e.entry_date].count++;
-    if (e.entry_type === 'income')  dateMap[e.entry_date].income  += Number(e.amount);
-    if (e.entry_type === 'expense') dateMap[e.entry_date].expense += Number(e.amount);
-    if (e.payment_mode === 'Cash')  dateMap[e.entry_date].cash    += Number(e.amount);
-    if (e.payment_mode === 'UPI')   dateMap[e.entry_date].upi     += Number(e.amount);
-    if (e.payment_mode === 'Card')  dateMap[e.entry_date].card    += Number(e.amount);
-  }
-  const dailyPoints = Object.values(dateMap)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map(d => ({ ...d, net: d.income - d.expense }));
-
-  // Category breakdown
-  const incByCat: Record<string, number> = {};
-  for (const e of incomeEntries) incByCat[e.category] = (incByCat[e.category] ?? 0) + Number(e.amount);
-  const expByCat: Record<string, number> = {};
-  for (const e of expenseEntries) expByCat[e.category] = (expByCat[e.category] ?? 0) + Number(e.amount);
+  // ── derived totals ───────────────────────────────────────────────────────
+  const totalIncome  = dailyPoints.reduce((s, d) => s + d.income,  0);
+  const totalExpense = dailyPoints.reduce((s, d) => s + d.expense, 0);
 
   const incCatPoints: CategoryPoint[] = Object.entries(incByCat)
     .map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   const expCatPoints: CategoryPoint[] = Object.entries(expByCat)
     .map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-
-  // Payment mode (GPay excluded — it's not a separate income source)
-  const byMode: Record<string, number> = {};
-  for (const e of [...incomeEntries, ...expenseEntries]) byMode[e.payment_mode] = (byMode[e.payment_mode] ?? 0) + Number(e.amount);
-  const modePoints: CategoryPoint[] = Object.entries(byMode)
+  const modePoints: CategoryPoint[] = Object.entries(modeMap)
     .map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 
-  // Day of week (income only)
+  // Day of week — from dailyPoints income
   const dowMap: Record<number, { total: number; count: number }> = {};
   for (let i = 0; i < 7; i++) dowMap[i] = { total: 0, count: 0 };
-  for (const e of incomeEntries) {
-    const dow = (new Date(e.entry_date + 'T12:00:00').getDay() + 6) % 7; // Mon=0
-    dowMap[dow].total += Number(e.amount);
+  for (const d of dailyPoints) {
+    if (d.income === 0) continue;
+    const dow = (new Date(d.date + 'T12:00:00').getDay() + 6) % 7;
+    dowMap[dow].total += d.income;
     dowMap[dow].count++;
   }
   const dowPoints: CategoryPoint[] = DOW_LABELS.map((name, i) => ({
@@ -162,9 +111,10 @@ export default function AnalyticsPage() {
   const uniqueDays = dailyPoints.filter(d => d.income > 0 || d.expense > 0).length || 1;
   const avgDailyIncome  = totalIncome  / uniqueDays;
   const avgDailyExpense = totalExpense / uniqueDays;
-  const allReal = [...incomeEntries, ...expenseEntries];
-  const cashTotal    = allReal.filter(e => e.payment_mode === 'Cash').reduce((s, e) => s + Number(e.amount), 0);
-  const digitalTotal = (totalIncome + totalExpense) - cashTotal;
+  const cashTotal    = dailyPoints.reduce((s, d) => s + d.cash, 0);
+  const upiTotal     = dailyPoints.reduce((s, d) => s + d.upi,  0);
+  const cardTotal    = dailyPoints.reduce((s, d) => s + d.card, 0);
+  const digitalTotal = upiTotal + cardTotal;
 
   const PERIODS: { key: Period; label: string }[] = [
     { key: 'today',      label: 'Today'      },
@@ -180,7 +130,7 @@ export default function AnalyticsPage() {
         <Sidebar active="/analytics" />
 
         <section className="space-y-6 pb-24">
-          {/* ── header ── */}
+          {/* header */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-brand-600">Insights</p>
@@ -188,7 +138,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* ── period picker ── */}
+          {/* period picker */}
           <div className="flex flex-wrap gap-2">
             {PERIODS.map(p => (
               <button
@@ -222,12 +172,10 @@ export default function AnalyticsPage() {
           )}
 
           {error && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-              {error}
-            </div>
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>
           )}
 
-          {/* ── key metrics ── */}
+          {/* key metrics */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: 'Best income day',      value: bestDay ? `${bestDay.date} (${formatINR(bestDay.income)})` : '—' },
@@ -242,7 +190,7 @@ export default function AnalyticsPage() {
             ))}
           </div>
 
-          {/* ── total bar ── */}
+          {/* totals */}
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="card border-l-4 border-l-green-400">
               <p className="text-sm text-slate-500">Total Income</p>
@@ -260,7 +208,7 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* ── charts ── */}
+          {/* charts */}
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="card">
               <p className="text-sm text-slate-500">Daily trend</p>
