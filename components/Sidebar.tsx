@@ -59,7 +59,7 @@ export function Sidebar({ active }: { active: string }) {
                     type="button"
                     onClick={handleLogout}
                     title="Logout"
-                    className="flex items-center justify-center rounded-xl p-2.5 text-red-500 transition-all duration-150 hover:bg-red-100 hover:text-red-700"
+                    className="flex items-center justify-center rounded-xl p-2.5 bg-red-500 text-white transition-all duration-150 hover:bg-red-600"
                   >
                     <LogOut className="h-[18px] w-[18px] shrink-0" />
                   </button>
