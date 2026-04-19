@@ -34,38 +34,40 @@ export function Sidebar({ active }: { active: string }) {
         <nav className="space-y-0.5">
           {items.map(item => {
             const isActive = active === item.href;
+            const isAdmin = item.href === '/admin';
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                <item.icon
-                  className={`h-[18px] w-[18px] shrink-0 transition-colors ${
-                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'
+              <div key={item.href} className={isAdmin ? 'flex items-center gap-1' : ''}>
+                <Link
+                  href={item.href}
+                  className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                    isAdmin ? 'flex-1' : 'w-full'
+                  } ${
+                    isActive
+                      ? 'bg-brand-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`}
-                />
-                {item.label}
-              </Link>
+                >
+                  <item.icon
+                    className={`h-[18px] w-[18px] shrink-0 transition-colors ${
+                      isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'
+                    }`}
+                  />
+                  {item.label}
+                </Link>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="Logout"
+                    className="flex items-center justify-center rounded-xl p-2.5 text-slate-400 transition-all duration-150 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <LogOut className="h-[18px] w-[18px] shrink-0" />
+                  </button>
+                )}
+              </div>
             );
           })}
         </nav>
-      </div>
-
-      {/* Logout — always pinned to bottom */}
-      <div className="shrink-0 border-t border-slate-200 p-3">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex w-full items-center gap-3 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-600 transition-all duration-150 hover:bg-red-600 hover:text-white"
-        >
-          <LogOut className="h-[18px] w-[18px] shrink-0" />
-          Logout
-        </button>
       </div>
     </aside>
   );
