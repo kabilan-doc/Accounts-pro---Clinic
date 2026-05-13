@@ -456,6 +456,7 @@ export default function AccountsPage() {
                       <th className="whitespace-nowrap px-3 py-3 text-right font-semibold uppercase tracking-wider">Cash</th>
                       <th className="whitespace-nowrap px-3 py-3 text-right font-semibold uppercase tracking-wider">Given</th>
                       <th className="whitespace-nowrap px-3 py-3 text-right font-semibold uppercase tracking-wider">+/−</th>
+                      <th className="hidden lg:table-cell whitespace-nowrap px-3 py-3 text-left font-semibold uppercase tracking-wider">Notes</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -510,6 +511,9 @@ export default function AccountsPage() {
                           <td className="px-3 py-2 text-right font-bold text-slate-900">{fmt(r.total_cash)}</td>
                           <td className="px-3 py-2 text-right">{fmt(r.total_cash_given)}</td>
                           <td className={`px-3 py-2 text-right ${edColor}`}>{fmtED(ed)}</td>
+                          <td className="hidden lg:table-cell px-3 py-2 text-slate-500 max-w-[180px]">
+                            {r.notes ? <span className="block truncate text-xs" title={r.notes}>{r.notes}</span> : <span className="text-slate-300">—</span>}
+                          </td>
                         </tr>
                       );
                     })}
@@ -550,6 +554,7 @@ export default function AccountsPage() {
                       <td className={`px-3 py-3 text-right ${totalED < 0 ? 'text-red-700' : 'text-green-700'}`}>
                         {fmtED(totalED)}
                       </td>
+                      <td className="hidden lg:table-cell px-3 py-3" />
                     </tr>
                   </tfoot>
                 </table>

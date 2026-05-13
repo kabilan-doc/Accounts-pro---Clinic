@@ -4,6 +4,9 @@ import { logAudit } from '@/lib/auditLogger';
 import { getSessionTokenFromHeaders } from '@/lib/sessionHelpers';
 
 export async function GET(request: Request) {
+  const session = getSessionTokenFromHeaders(request.headers);
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+
   const url = new URL(request.url);
   const { searchParams } = url;
   const page = Number(searchParams.get('page') ?? '1');

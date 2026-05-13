@@ -142,7 +142,7 @@ export async function GET(request: Request) {
   const todayCashFinal = todayPoint?.cash    ?? 0;
   const todayUPIFinal  = todayPoint?.upi     ?? 0;
   const todayCount     = todayDA
-    ? e.filter(r => r.entry_date === todayStr).length
+    ? e.filter(r => r.entry_date === todayStr && !isGPay(r)).length
     : (todayPoint?.count ?? 0);
 
   // ── this week (sum from dateMap) ───────────────────────────────────────

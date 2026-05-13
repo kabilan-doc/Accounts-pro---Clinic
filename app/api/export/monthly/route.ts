@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSessionTokenFromHeaders } from '@/lib/sessionHelpers';
 import * as XLSX from 'xlsx';
 
 const MONTH_NAMES = [
@@ -8,6 +9,9 @@ const MONTH_NAMES = [
 ];
 
 export async function GET(request: Request) {
+  const session = getSessionTokenFromHeaders(request.headers);
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+
   const url = new URL(request.url);
   const year  = url.searchParams.get('year');
   const month = url.searchParams.get('month');  // 1-12
@@ -53,6 +57,7 @@ export async function GET(request: Request) {
     const d = dateMap[e.entry_date];
     d.entries.push(e);
     if (e.is_voided) continue;
+    if (e.entry_type === 'income' && e.subcategory === 'GPay') continue; // payment mode indicator, not additional income
     const amt = Number(e.amount);
     if (e.entry_type === 'income') {
       d.totalSales += amt;

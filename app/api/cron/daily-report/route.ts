@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: error.message }, { status: 500 });
   }
 
-  const incomeEntries = entries?.filter((entry: any) => entry.entry_type === 'income') ?? [];
+  const incomeEntries = entries?.filter((entry: any) => entry.entry_type === 'income' && entry.subcategory !== 'GPay') ?? [];
   const expenseEntries = entries?.filter((entry: any) => entry.entry_type === 'expense') ?? [];
 
   const incomeTotal = incomeEntries.reduce((sum: number, entry: any) => sum + Number(entry.amount), 0);

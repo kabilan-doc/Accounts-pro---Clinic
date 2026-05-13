@@ -5,7 +5,7 @@ import { getSessionTokenFromHeaders } from '@/lib/sessionHelpers';
 const CLINIC_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
 
 export async function GET(request: Request) {
-  const session = getSessionTokenFromHeaders(request.headers as any);
+  const session = getSessionTokenFromHeaders(request.headers);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
   const url    = new URL(request.url);
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const rows = data ?? [];
 
   // Aggregate from daily_accounts columns
-  const income       = rows.reduce((s, r) => s + (Number(r.total_sale_amount) || Number(r.total_sales) || 0), 0);
+  const income       = rows.reduce((s, r) => s + (Number(r.total_sale_amount) || Number(r.total_sales) || 0) - (Number(r.return_amount) || 0), 0);
   const expense      = rows.reduce((s, r) => s + (Number(r.expense) || 0), 0);
   const gpay         = rows.reduce((s, r) => s + (Number(r.gpay) || 0), 0);
   const totalCash    = rows.reduce((s, r) => s + (Number(r.total_cash) || 0), 0);

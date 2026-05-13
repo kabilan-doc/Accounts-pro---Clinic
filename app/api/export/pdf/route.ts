@@ -3,7 +3,7 @@ import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { getSessionTokenFromHeaders } from '@/lib/sessionHelpers';
 
 export async function GET(request: Request) {
-  const session = getSessionTokenFromHeaders(request.headers as any);
+  const session = getSessionTokenFromHeaders(request.headers);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(request.url);
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       <td>${e.reference_number ?? ''}</td>
     </tr>`).join('');
 
-  const totalIncome = entries.filter((e: any) => e.entry_type === 'income').reduce((s: number, e: any) => s + Number(e.amount), 0);
+  const totalIncome = entries.filter((e: any) => e.entry_type === 'income' && e.subcategory !== 'GPay').reduce((s: number, e: any) => s + Number(e.amount), 0);
   const totalExpense = entries.filter((e: any) => e.entry_type === 'expense').reduce((s: number, e: any) => s + Number(e.amount), 0);
   const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 

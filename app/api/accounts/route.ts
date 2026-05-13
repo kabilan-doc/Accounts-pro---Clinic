@@ -5,7 +5,7 @@ import { getSessionTokenFromHeaders } from '@/lib/sessionHelpers';
 const CLINIC_ID = 'a1b2c3d4-0000-0000-0000-000000000001';
 
 export async function GET(request: Request) {
-  const session = getSessionTokenFromHeaders(request.headers as any);
+  const session = getSessionTokenFromHeaders(request.headers);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
   const url = new URL(request.url);
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const session = getSessionTokenFromHeaders(request.headers as any);
+  const session = getSessionTokenFromHeaders(request.headers);
   if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();

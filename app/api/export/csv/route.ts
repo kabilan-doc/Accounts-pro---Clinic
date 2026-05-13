@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSessionTokenFromHeaders } from '@/lib/sessionHelpers';
 
 export async function GET(request: Request) {
+  const session = getSessionTokenFromHeaders(request.headers);
+  if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+
   const url = new URL(request.url);
   const startDate = url.searchParams.get('start_date');
   const endDate = url.searchParams.get('end_date');
