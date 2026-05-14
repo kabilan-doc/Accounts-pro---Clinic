@@ -106,6 +106,16 @@ export async function DELETE(request: Request) {
   const id  = url.searchParams.get('id');
   if (!id) return NextResponse.json({ message: 'User id required.' }, { status: 400 });
 
+  // Nullify entered_by on any entries this user created so the FK constraint doesn't block deletion
+  const { error: nullifyError } = await supabaseAdmin
+    .from('account_entries')
+    .update({ entered_by: null })
+    .eq('entered_by', id);
+
+  if (nullifyError) {
+    return NextResponse.json({ message: nullifyError.message }, { status: 500 });
+  }
+
   const { error } = await supabaseAdmin.from('profiles').delete().eq('id', id);
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
