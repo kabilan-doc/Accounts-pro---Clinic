@@ -66,44 +66,10 @@ interface DayStats {
 async function fetchMonthStats(fy: number, month: string): Promise<MonthStats> {
   const { start, end } = fyMonthDate(fy, month);
   const empty = { month, fy, income:0, expense:0, net:0, cash:0, upi:0, entries:0, consultation:0, pharmacy:0, procedure:0, other:0 };
-  if (fy === 2025) {
-    const res = await fetch(`/api/accounts/monthly-stats?start=${start}&end=${end}`);
-    if (!res.ok) return empty;
-    const d = await res.json();
-    return { month, fy, ...d };
-  }
-  const res = await fetch(`/api/entries?start_date=${start}&end_date=${end.substring(0,10)}&page=1`);
+  const res = await fetch(`/api/accounts/monthly-stats?start=${start}&end=${end}`);
   if (!res.ok) return empty;
-  const data = await res.json();
-  let allEntries = [...(data.entries ?? [])];
-  const pages = Math.ceil((data.count ?? 0) / 20);
-  if (pages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: pages - 1 }, (_, i) =>
-        fetch(`/api/entries?start_date=${start}&end_date=${end.substring(0,10)}&page=${i+2}`)
-          .then(r => r.json()).then(d => d.entries ?? [])
-      )
-    );
-    rest.forEach(pg => allEntries.push(...pg));
-  }
-  const active = allEntries.filter((e: { is_voided: boolean }) => !e.is_voided);
-  const isGPay = (e: { entry_type: string; subcategory?: string }) =>
-    e.entry_type === 'income' && e.subcategory === 'GPay';
-  const inc  = active.filter((e: { entry_type: string; subcategory?: string }) => e.entry_type === 'income' && !isGPay(e));
-  const exp  = active.filter((e: { entry_type: string }) => e.entry_type === 'expense');
-  const real = [...inc, ...exp];
-  const s    = (arr: { amount: number | string }[]) => arr.reduce((x, e) => x + Number(e.amount), 0);
-  return {
-    month, fy,
-    income:  s(inc), expense: s(exp), net: s(inc) - s(exp),
-    cash:    s(real.filter((e: { payment_mode: string }) => e.payment_mode === 'Cash')),
-    upi:     s(real.filter((e: { payment_mode: string }) => e.payment_mode === 'UPI')),
-    entries: real.length,
-    consultation: s(inc.filter((e: { category: string }) => e.category === 'Consultation')),
-    pharmacy:     s(inc.filter((e: { category: string }) => e.category === 'Pharmacy Sales')),
-    procedure:    s(inc.filter((e: { category: string }) => e.category === 'Procedure')),
-    other:        s(inc.filter((e: { category: string }) => e.category === 'Other Income')),
-  };
+  const d = await res.json();
+  return { month, fy, ...d };
 }
 
 async function fetchDayStats(start: string, end: string): Promise<DayStats[]> {
