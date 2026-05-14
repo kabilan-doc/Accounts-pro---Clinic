@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import {
   TrendingUp, TrendingDown, Wallet,
-  Banknote, Smartphone, RefreshCw
+  Banknote, Smartphone, RefreshCw,
+  ArrowUpRight, ArrowDownRight, Target, BarChart2, LineChart as LineChartIcon
 } from 'lucide-react';
 import { SummaryCard } from '@/components/SummaryCard';
 import { Sidebar } from '@/components/Sidebar';
@@ -12,6 +13,7 @@ import { DateSummaryTable } from '@/components/DateSummaryTable';
 import {
   NetTrendChart,
   IncomeExpenseBarChart,
+  IncomeExpenseCumulativeChart,
   CategoryDonut,
   type DailyPoint,
   type CategoryPoint
@@ -33,10 +35,22 @@ function toPoints(obj: Record<string, number>): CategoryPoint[] {
     .sort((a, b) => b.value - a.value);
 }
 
+function WoWBadge({ pct }: { pct: number | null }) {
+  if (pct === null) return null;
+  const up = pct >= 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${up ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
+      {up ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+      {Math.abs(pct).toFixed(1)}%
+    </span>
+  );
+}
+
 export default function DashboardPage() {
-  const [data, setData]       = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState('');
+  const [data, setData]         = useState<DashboardData | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
+  const [chartMode, setChartMode] = useState<'bar' | 'cumulative'>('bar');
 
   const load = async () => {
     setLoading(true);
@@ -54,23 +68,34 @@ export default function DashboardPage() {
 
   useEffect(() => { load(); }, []);
 
-  const today    = data?.today;
-  const month    = data?.month;
-  const daily    = data?.dailyBreakdown ?? [];
-  const incCats  = toPoints(data?.monthIncomeByCategory  ?? {});
-  const expCats  = toPoints(data?.monthExpenseByCategory ?? {});
+  const today   = data?.today;
+  const month   = data?.month;
+  const daily   = data?.dailyBreakdown ?? [];
+  const incCats = toPoints(data?.monthIncomeByCategory  ?? {});
+  const expCats = toPoints(data?.monthExpenseByCategory ?? {});
 
-  // Date-wise summary table rows (latest 14 days, non-zero or all)
+  // Table rows — latest 14 days, most-recent first
   const tableRows = [...daily].reverse().slice(0, 14).map(d => ({
-    date:    d.date,
-    income:  d.income,
-    expense: d.expense,
-    net:     d.net,
-    cash:    d.cash,
-    upi:     d.upi,
-    card:    d.card,
-    count:   d.count
+    date: d.date, income: d.income, expense: d.expense, net: d.net,
+    cash: d.cash, upi: d.upi, card: d.card, count: d.count
   }));
+
+  // ── WoW growth ─────────────────────────────────────────────────────────────
+  const thisWeekInc  = daily.slice(-7).reduce((s, d) => s + d.income,  0);
+  const lastWeekInc  = daily.slice(-14, -7).reduce((s, d) => s + d.income,  0);
+  const thisWeekExp  = daily.slice(-7).reduce((s, d) => s + d.expense, 0);
+  const lastWeekExp  = daily.slice(-14, -7).reduce((s, d) => s + d.expense, 0);
+  const wowIncPct    = lastWeekInc > 0 ? (thisWeekInc - lastWeekInc) / lastWeekInc * 100 : null;
+  const wowExpPct    = lastWeekExp > 0 ? (thisWeekExp - lastWeekExp) / lastWeekExp * 100 : null;
+
+  // ── Projected Income ────────────────────────────────────────────────────────
+  const now          = new Date();
+  const monthPrefix  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const daysInMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const activeDays   = daily.filter(d => d.income > 0 && d.date.startsWith(monthPrefix)).length;
+  const projectedInc = activeDays > 0 ? Math.round((month?.income ?? 0) / activeDays * daysInMonth) : 0;
+
+  const isEmptyToday = !loading && (today?.count ?? 0) === 0 && (today?.income ?? 0) === 0;
 
   return (
     <div className="w-full max-w-[1800px] mx-auto px-4 py-6">
@@ -101,22 +126,29 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* ── today summary cards ── */}
+          {/* ── today summary ── */}
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-400">Today</p>
+
             {loading ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="skeleton h-28 rounded-2xl" />
                 ))}
               </div>
+            ) : isEmptyToday ? (
+              <div className="animate-fadeIn rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-sm px-6 py-8 text-center">
+                <p className="text-2xl mb-1">☀️</p>
+                <p className="text-base font-semibold text-slate-700">Start your day</p>
+                <p className="mt-1 text-sm text-slate-400">No entries recorded yet for today. Add your first transaction to see the summary.</p>
+              </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5 animate-fadeIn">
-                <SummaryCard title="Total Income"    amount={formatINR(today?.income  ?? 0)} subtitle={`${today?.count ?? 0} entries`} icon={TrendingUp}   color="green"  />
-                <SummaryCard title="Total Expense"   amount={formatINR(today?.expense ?? 0)} subtitle="Today"             icon={TrendingDown} color="red"    />
-                <SummaryCard title="Net Balance"     amount={formatINR(today?.net     ?? 0)} subtitle="Income − Expense"  icon={Wallet}       color="blue"   />
-                <SummaryCard title="Cash Collected"  amount={formatINR(today?.cash    ?? 0)} subtitle="Cash transactions" icon={Banknote}     color="slate"  />
-                <SummaryCard title="UPI Collected"   amount={formatINR(today?.upi     ?? 0)} subtitle="UPI transactions"  icon={Smartphone}   color="purple" />
+                <SummaryCard title="Total Income"   amount={formatINR(today?.income  ?? 0)} subtitle={`${today?.count ?? 0} entries`} icon={TrendingUp}   color="green"  />
+                <SummaryCard title="Total Expense"  amount={formatINR(today?.expense ?? 0)} subtitle="Today"             icon={TrendingDown} color="red"    />
+                <SummaryCard title="Net Balance"    amount={formatINR(today?.net     ?? 0)} subtitle="Income − Expense"  icon={Wallet}       color="blue"   />
+                <SummaryCard title="Cash Collected" amount={formatINR(today?.cash    ?? 0)} subtitle="Cash transactions" icon={Banknote}     color="slate"  />
+                <SummaryCard title="UPI Collected"  amount={formatINR(today?.upi     ?? 0)} subtitle="UPI transactions"  icon={Smartphone}   color="purple" />
               </div>
             )}
           </div>
@@ -132,24 +164,38 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-3 animate-fadeIn">
-                <div className="flex items-center justify-between rounded-2xl border border-green-200 bg-green-50 p-5 shadow-sm">
+                {/* Income */}
+                <div className="flex items-center justify-between rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-white/90 backdrop-blur-sm p-5 shadow-sm">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-green-600">Income</p>
-                    <p className="mt-1.5 text-2xl font-bold tabular-nums text-green-700">{formatINR(month?.income ?? 0)}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-green-600">Income</p>
+                      <WoWBadge pct={wowIncPct} />
+                    </div>
+                    <p className="text-2xl font-bold tabular-nums text-green-700 font-mono">{formatINR(month?.income ?? 0)}</p>
+                    <p className="mt-1 text-[11px] text-green-500">WoW vs last 7 days</p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-green-300" />
                 </div>
-                <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+
+                {/* Expense */}
+                <div className="flex items-center justify-between rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-white/90 backdrop-blur-sm p-5 shadow-sm">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-red-600">Expense</p>
-                    <p className="mt-1.5 text-2xl font-bold tabular-nums text-red-600">{formatINR(month?.expense ?? 0)}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-red-600">Expense</p>
+                      <WoWBadge pct={wowExpPct} />
+                    </div>
+                    <p className="text-2xl font-bold tabular-nums text-red-600 font-mono">{formatINR(month?.expense ?? 0)}</p>
+                    <p className="mt-1 text-[11px] text-red-400">WoW vs last 7 days</p>
                   </div>
                   <TrendingDown className="h-8 w-8 text-red-300" />
                 </div>
-                <div className={`flex items-center justify-between rounded-2xl border p-5 shadow-sm ${(month?.net ?? 0) >= 0 ? 'border-blue-200 bg-blue-50' : 'border-red-200 bg-red-50'}`}>
+
+                {/* Net Balance */}
+                <div className={`flex items-center justify-between rounded-2xl border p-5 shadow-sm backdrop-blur-sm ${(month?.net ?? 0) >= 0 ? 'border-blue-200 bg-gradient-to-br from-blue-50 to-white/90' : 'border-red-200 bg-gradient-to-br from-red-50 to-white/90'}`}>
                   <div>
-                    <p className={`text-xs font-semibold uppercase tracking-wider ${(month?.net ?? 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>Net Balance</p>
-                    <p className={`mt-1.5 text-2xl font-bold tabular-nums ${(month?.net ?? 0) >= 0 ? 'text-blue-700' : 'text-red-600'}`}>{formatINR(month?.net ?? 0)}</p>
+                    <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${(month?.net ?? 0) >= 0 ? 'text-blue-600' : 'text-red-600'}`}>Net Balance</p>
+                    <p className={`text-2xl font-bold tabular-nums font-mono ${(month?.net ?? 0) >= 0 ? 'text-blue-700' : 'text-red-600'}`}>{formatINR(month?.net ?? 0)}</p>
+                    <p className={`mt-1 text-[11px] ${(month?.net ?? 0) >= 0 ? 'text-blue-400' : 'text-red-400'}`}>Income − Expense</p>
                   </div>
                   <Wallet className={`h-8 w-8 ${(month?.net ?? 0) >= 0 ? 'text-blue-300' : 'text-red-300'}`} />
                 </div>
@@ -157,28 +203,78 @@ export default function DashboardPage() {
             )}
           </div>
 
+          {/* ── financial insights ── */}
+          {!loading && activeDays > 0 && (
+            <div className="animate-fadeIn rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/80 to-white/90 backdrop-blur-sm shadow-sm px-5 py-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Target size={15} className="text-amber-600" />
+                <p className="text-xs font-semibold uppercase tracking-widest text-amber-600">Financial Insights</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-[11px] text-slate-500 mb-0.5">Projected Income</p>
+                  <p className="text-base font-bold font-mono text-slate-800">{formatINR(projectedInc)}</p>
+                  <p className="text-[10px] text-slate-400">at current avg × {daysInMonth} days</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-500 mb-0.5">Daily Avg Income</p>
+                  <p className="text-base font-bold font-mono text-slate-800">{formatINR(activeDays > 0 ? Math.round((month?.income ?? 0) / activeDays) : 0)}</p>
+                  <p className="text-[10px] text-slate-400">over {activeDays} active day{activeDays !== 1 ? 's' : ''}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-500 mb-0.5">Expense Ratio</p>
+                  <p className={`text-base font-bold font-mono ${(month?.income ?? 0) > 0 && ((month?.expense ?? 0) / (month?.income ?? 1)) > 0.4 ? 'text-red-600' : 'text-slate-800'}`}>
+                    {(month?.income ?? 0) > 0 ? (((month?.expense ?? 0) / (month?.income ?? 1)) * 100).toFixed(1) : '0.0'}%
+                  </p>
+                  <p className="text-[10px] text-slate-400">expense ÷ income</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-500 mb-0.5">This Week Inc</p>
+                  <p className="text-base font-bold font-mono text-slate-800">{formatINR(thisWeekInc)}</p>
+                  <p className="text-[10px] text-slate-400">last 7 days</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── charts row 1 ── */}
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="card">
               <p className="text-sm text-slate-500">30-day trend</p>
               <h2 className="mt-1 text-lg font-semibold text-slate-900">Net Balance</h2>
               <div className="mt-4">
-                {loading ? (
-                  <div className="skeleton h-[260px]" />
-                ) : (
-                  <NetTrendChart data={daily} />
-                )}
+                {loading ? <div className="skeleton h-[260px]" /> : <NetTrendChart data={daily} />}
               </div>
             </div>
 
             <div className="card">
-              <p className="text-sm text-slate-500">Last 14 days</p>
-              <h2 className="mt-1 text-lg font-semibold text-slate-900">Income vs Expense</h2>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm text-slate-500">Last 14 days</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-900">Income vs Expense</h2>
+                </div>
+                <div className="flex rounded-xl border border-slate-200 overflow-hidden text-xs mt-1">
+                  <button
+                    onClick={() => setChartMode('bar')}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 font-medium transition-colors ${chartMode === 'bar' ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                  >
+                    <BarChart2 size={12} /> Bar
+                  </button>
+                  <button
+                    onClick={() => setChartMode('cumulative')}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 font-medium transition-colors ${chartMode === 'cumulative' ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                  >
+                    <LineChartIcon size={12} /> Cumulative
+                  </button>
+                </div>
+              </div>
               <div className="mt-4">
                 {loading ? (
                   <div className="skeleton h-[260px]" />
-                ) : (
+                ) : chartMode === 'bar' ? (
                   <IncomeExpenseBarChart data={daily} />
+                ) : (
+                  <IncomeExpenseCumulativeChart data={daily} />
                 )}
               </div>
             </div>
@@ -190,11 +286,7 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500">This month</p>
               <h2 className="mt-1 text-lg font-semibold text-slate-900">Income Breakdown</h2>
               <div className="mt-4">
-                {loading ? (
-                  <div className="skeleton h-[260px]" />
-                ) : (
-                  <CategoryDonut data={incCats} emptyLabel="No income entries this month" />
-                )}
+                {loading ? <div className="skeleton h-[260px]" /> : <CategoryDonut data={incCats} emptyLabel="No income entries this month" />}
               </div>
             </div>
 
@@ -202,11 +294,7 @@ export default function DashboardPage() {
               <p className="text-sm text-slate-500">This month</p>
               <h2 className="mt-1 text-lg font-semibold text-slate-900">Expense Breakdown</h2>
               <div className="mt-4">
-                {loading ? (
-                  <div className="skeleton h-[260px]" />
-                ) : (
-                  <CategoryDonut data={expCats} emptyLabel="No expense entries this month" />
-                )}
+                {loading ? <div className="skeleton h-[260px]" /> : <CategoryDonut data={expCats} emptyLabel="No expense entries this month" />}
               </div>
             </div>
           </div>

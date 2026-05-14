@@ -2,6 +2,7 @@
 
 import {
   LineChart, Line,
+  AreaChart, Area,
   BarChart, Bar,
   PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -106,6 +107,45 @@ export function IncomeExpenseBarChart({ data }: { data: DailyPoint[] }) {
   );
 }
 
+// ─── 2b. Cumulative Income vs Expense area chart (last 14 days) ──────────────
+export function IncomeExpenseCumulativeChart({ data }: { data: DailyPoint[] }) {
+  const last14 = data.slice(-14);
+  let cumInc = 0, cumExp = 0;
+  const chartData = last14.map(d => {
+    cumInc += d.income;
+    cumExp += d.expense;
+    return { date: d.date, 'Cum. Income': cumInc, 'Cum. Expense': cumExp };
+  });
+
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+        <defs>
+          <linearGradient id="gradInc" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="#16a34a" stopOpacity={0.18} />
+            <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="gradExp" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.15} />
+            <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+        <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={shortDate} interval="preserveStartEnd" />
+        <YAxis tick={{ fontSize: 11, fill: '#64748b' }} tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`} width={52} />
+        <Tooltip
+          formatter={(v: number, name: string) => [INR(v), name]}
+          labelFormatter={shortDate}
+          contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+        />
+        <Legend wrapperStyle={{ fontSize: 13 }} />
+        <Area type="monotone" dataKey="Cum. Income"  stroke="#16a34a" strokeWidth={2.5} fill="url(#gradInc)" dot={false} activeDot={{ r: 5 }} />
+        <Area type="monotone" dataKey="Cum. Expense" stroke="#ef4444" strokeWidth={2.5} fill="url(#gradExp)" dot={false} activeDot={{ r: 5 }} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
 // ─── 3. Category breakdown donut ─────────────────────────────────────────────
 export function CategoryDonut({
   data,
@@ -159,8 +199,12 @@ export function CategoryDonut({
           ))}
         </Pie>
         <Tooltip
-          formatter={(v: number) => [INR(v)]}
-          contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+          formatter={(v: number, name: string, props: { payload?: { value: number } }) => {
+            const total = data.reduce((s, d) => s + d.value, 0);
+            const pct = total > 0 ? ((props.payload?.value ?? 0) / total * 100).toFixed(1) : '0';
+            return [`${INR(v)}  (${pct}%)`, name];
+          }}
+          contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13, fontWeight: 600 }}
         />
         <Legend
           wrapperStyle={{ fontSize: 12 }}
