@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import {
   Download, TrendingUp, TrendingDown, Wallet,
   ChevronDown, ChevronRight, ArrowUpRight, ArrowDownRight,
-  Layers, Eye, EyeOff, AlertTriangle
+  Layers, Eye, EyeOff, AlertTriangle, Home, Anchor
 } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
@@ -261,38 +262,38 @@ export default function HistoricalPage() {
               'hover:bg-slate-50/80'
             }`}
           >
-            <td className="px-2 py-2.5 text-slate-400 w-6">
+            <td className="px-2 py-3 text-slate-400 w-6">
               {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </td>
-            <td className="px-3 py-2.5 font-semibold text-slate-700 whitespace-nowrap font-mono text-xs">{month}</td>
-            <td className="px-3 py-2.5 text-right"><Num v={s.income} cls="text-green-700 font-semibold" /></td>
-            <td className="px-3 py-2.5 text-right"><Num v={s.expense} cls="text-red-500" /></td>
-            <td className="px-3 py-2.5 text-right" style={netHeat(s.net)}>
-              <Num v={s.net} cls={`font-semibold ${s.net >= 0 ? 'text-slate-800' : 'text-red-600'}`} />
+            <td className="px-4 py-3 font-bold text-slate-700 whitespace-nowrap font-mono text-xs tracking-wide">{month}</td>
+            <td className="px-4 py-3 text-right"><Num v={s.income} cls="text-emerald-700 font-bold" /></td>
+            <td className="px-4 py-3 text-right"><Num v={s.expense} cls="text-rose-500" /></td>
+            <td className="px-4 py-3 text-right" style={netHeat(s.net)}>
+              <Num v={s.net} cls={`font-bold ${s.net >= 0 ? 'text-slate-800' : 'text-rose-600'}`} />
             </td>
-            <td className="px-3 py-2.5 text-right text-slate-500 font-mono text-xs">
+            <td className="px-4 py-3 text-right text-slate-500 font-mono text-xs">
               {s.income > 0 ? (
-                <span className={margin >= 30 ? 'text-green-700 font-semibold' : margin >= 15 ? 'text-amber-600' : 'text-red-500 font-semibold'}>
+                <span className={margin >= 30 ? 'text-emerald-700 font-bold' : margin >= 15 ? 'text-amber-600' : 'text-rose-500 font-bold'}>
                   {margin.toFixed(1)}%
                 </span>
               ) : '—'}
             </td>
-            <td className="px-3 py-2.5 text-right"><Num v={s.consultation} cls="text-slate-500" /></td>
-            <td className="px-3 py-2.5 text-right" style={pharmHeat(s.pharmacy)}>
+            <td className="px-4 py-3 text-right"><Num v={s.consultation} cls="text-slate-500" /></td>
+            <td className="px-4 py-3 text-right" style={pharmHeat(s.pharmacy)}>
               <Num v={s.pharmacy} cls="text-slate-700" />
             </td>
-            <td className="hidden lg:table-cell px-3 py-2.5 text-right"><Num v={s.upi} cls="text-slate-500" /></td>
-            <td className={`px-3 py-2.5 text-right font-mono text-xs ${anomaly ? 'bg-amber-50' : ''}`}>
+            <td className="hidden lg:table-cell px-4 py-3 text-right"><Num v={s.upi} cls="text-slate-500" /></td>
+            <td className={`px-4 py-3 text-right font-mono text-xs ${anomaly ? 'bg-amber-50' : ''}`}>
               <span className={anomaly ? 'inline-flex items-center gap-1 text-amber-700 font-semibold' : 'text-slate-500'}>
                 {anomaly && <AlertTriangle size={11} />}
                 {s.entries}
               </span>
             </td>
-            <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+            <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
               <button
                 type="button"
                 onClick={() => window.open(`/api/export/monthly?year=${calYear}&month=${calMonth}`, '_blank')}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 whitespace-nowrap"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 hover:shadow-md transition-all duration-200 whitespace-nowrap"
               >
                 <Download size={10} /> xlsx
               </button>
@@ -382,28 +383,43 @@ export default function HistoricalPage() {
 
         <section className="space-y-6 pb-24">
 
+          {/* ── Breadcrumb ── */}
+          <nav className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Link href="/dashboard" className="inline-flex items-center gap-1 hover:text-brand-600 transition-colors duration-200">
+              <Home size={12} />
+              Home
+            </Link>
+            <ChevronRight size={11} className="text-slate-300" />
+            <span className="font-semibold text-slate-600">FY Analytics</span>
+          </nav>
+
           {/* ── Header ── */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-brand-600">Financial Years</p>
-              <h1 className="text-3xl font-semibold text-slate-900">Historical Analytics</h1>
+              <p className="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">Financial Years</p>
+              <h1 className="mt-0.5 text-3xl font-bold text-slate-900">Historical Analytics</h1>
               <p className="mt-1 text-sm text-slate-500">
                 Month-wise comparison — FY2025 (Apr 2025–Mar 2026) vs FY2026 (Apr 2026–Mar 2027)
               </p>
             </div>
-            {/* Quick-jump links */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs text-slate-400 font-medium">Jump to:</span>
+
+            {/* Quick-jump button group */}
+            <div className="flex items-center gap-2 flex-shrink-0 self-start sm:self-auto">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mr-1">Jump to</span>
               <button
+                type="button"
                 onClick={() => ref2025.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                className="rounded-xl border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 shadow-sm shadow-emerald-100 transition-all duration-300 hover:bg-emerald-100 hover:shadow-md hover:-translate-y-0.5"
               >
+                <Anchor size={11} />
                 FY2025
               </button>
               <button
+                type="button"
                 onClick={() => ref2026.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 text-xs font-bold text-brand-700 shadow-sm shadow-brand-100 transition-all duration-300 hover:bg-brand-100 hover:shadow-md hover:-translate-y-0.5"
               >
+                <Anchor size={11} />
                 FY2026
               </button>
             </div>
@@ -595,22 +611,22 @@ export default function HistoricalPage() {
                 <div className="overflow-auto max-h-[620px]">
                   <table className="min-w-full divide-y divide-slate-100 text-sm">
                     <thead className="sticky top-0 z-20 shadow-sm">
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="w-6 px-2 py-3" />
-                        <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Month</th>
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Income</th>
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Expense</th>
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Net</th>
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Margin %</th>
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Consult</th>
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
+                      <tr className="bg-slate-50/95 border-b border-slate-200" style={{ backdropFilter: 'blur(6px)' }}>
+                        <th className="w-6 px-2 py-3.5" />
+                        <th className="px-4 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">Month</th>
+                        <th className="px-4 py-3.5 text-right text-[10px] font-bold text-emerald-600 uppercase tracking-[0.12em] whitespace-nowrap">Income</th>
+                        <th className="px-4 py-3.5 text-right text-[10px] font-bold text-rose-500 uppercase tracking-[0.12em] whitespace-nowrap">Expense</th>
+                        <th className="px-4 py-3.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">Net</th>
+                        <th className="px-4 py-3.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">Margin</th>
+                        <th className="px-4 py-3.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">Consult</th>
+                        <th className="px-4 py-3.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">
                           <span className="inline-flex items-center gap-1">
-                            Pharmacy <span className="text-green-500 text-[10px]">●</span>
+                            Pharmacy <span className="text-emerald-500 text-[10px]">●</span>
                           </span>
                         </th>
-                        <th className="hidden lg:table-cell px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">UPI</th>
-                        <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">Entries</th>
-                        <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Export</th>
+                        <th className="hidden lg:table-cell px-4 py-3.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">UPI</th>
+                        <th className="px-4 py-3.5 text-right text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">Entries</th>
+                        <th className="px-4 py-3.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em]">Export</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 bg-white">
