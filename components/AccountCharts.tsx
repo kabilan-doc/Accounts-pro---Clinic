@@ -5,7 +5,8 @@ import {
   AreaChart, Area,
   BarChart, Bar,
   PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ReferenceLine
 } from 'recharts';
 
 // ─── shared palette ───────────────────────────────────────────────────────────
@@ -21,7 +22,7 @@ const INR = (v: number) =>
 
 const shortDate = (d: string) => {
   const parts = d.split('-');
-  return `${parts[2]}/${parts[1]}`;   // DD/MM
+  return `${parts[2]}/${parts[1]}`;
 };
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -41,11 +42,11 @@ export interface CategoryPoint {
   value: number;
 }
 
-// ─── 1. Net balance trend line (30 days) ──────────────────────────────────────
-export function NetTrendChart({ data }: { data: DailyPoint[] }) {
+// ─── 1. Net balance trend line ────────────────────────────────────────────────
+export function NetTrendChart({ data, syncId }: { data: DailyPoint[]; syncId?: string }) {
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+      <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }} syncId={syncId}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
         <XAxis
           dataKey="date"
@@ -63,6 +64,8 @@ export function NetTrendChart({ data }: { data: DailyPoint[] }) {
           labelFormatter={shortDate}
           contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
         />
+        {/* Zero line — instantly shows deficit days */}
+        <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} />
         <Line
           type="monotone"
           dataKey="net"
@@ -77,12 +80,12 @@ export function NetTrendChart({ data }: { data: DailyPoint[] }) {
   );
 }
 
-// ─── 2. Income vs Expense grouped bar (14 days) ───────────────────────────────
-export function IncomeExpenseBarChart({ data }: { data: DailyPoint[] }) {
-  const last14 = data.slice(-14);
+// ─── 2. Income vs Expense grouped bar ─────────────────────────────────────────
+export function IncomeExpenseBarChart({ data, syncId, maxDays = 14 }: { data: DailyPoint[]; syncId?: string; maxDays?: number }) {
+  const sliced = data.slice(-maxDays);
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={last14} margin={{ top: 5, right: 10, left: 0, bottom: 5 }} barGap={2}>
+      <BarChart data={sliced} margin={{ top: 5, right: 10, left: 0, bottom: 5 }} barGap={2} syncId={syncId}>
         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
         <XAxis
           dataKey="date"
@@ -100,14 +103,14 @@ export function IncomeExpenseBarChart({ data }: { data: DailyPoint[] }) {
           contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
         />
         <Legend wrapperStyle={{ fontSize: 13 }} />
-        <Bar dataKey="income" name="Income"  fill="#16a34a" radius={[4, 4, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="income"  name="Income"  fill="#16a34a" radius={[4, 4, 0, 0]} maxBarSize={28} />
         <Bar dataKey="expense" name="Expense" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={28} />
       </BarChart>
     </ResponsiveContainer>
   );
 }
 
-// ─── 2b. Cumulative Income vs Expense area chart (last 14 days) ──────────────
+// ─── 2b. Cumulative Income vs Expense area chart ──────────────────────────────
 export function IncomeExpenseCumulativeChart({ data }: { data: DailyPoint[] }) {
   const last14 = data.slice(-14);
   let cumInc = 0, cumExp = 0;
@@ -248,7 +251,7 @@ export function PaymentModeChart({ data }: { data: CategoryPoint[] }) {
   );
 }
 
-// ─── 5. Category bar chart (for analytics) ───────────────────────────────────
+// ─── 5. Category bar chart (vertical, for fallback) ───────────────────────────
 export function CategoryBarChart({ data }: { data: CategoryPoint[] }) {
   if (!data.length) {
     return (
@@ -288,8 +291,23 @@ export function CategoryBarChart({ data }: { data: CategoryPoint[] }) {
   );
 }
 
-// ─── 6. Day-of-week analysis bar ─────────────────────────────────────────────
+// ─── 6. Day-of-week analysis bar — color-coded by performance ─────────────────
 export function DayOfWeekChart({ data }: { data: CategoryPoint[] }) {
+  const values = data.map(d => d.value).filter(v => v > 0);
+  const max    = values.length > 0 ? Math.max(...values) : 1;
+  const min    = values.length > 0 ? Math.min(...values) : 0;
+
+  const barColor = (v: number): string => {
+    if (v === 0) return '#e2e8f0';
+    if (max === min) return '#2563eb';
+    const ratio = (v - min) / (max - min);
+    if (ratio >= 0.85) return '#1d4ed8';
+    if (ratio >= 0.65) return '#2563eb';
+    if (ratio >= 0.45) return '#3b82f6';
+    if (ratio >= 0.25) return '#93c5fd';
+    return '#cbd5e1';
+  };
+
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -304,8 +322,58 @@ export function DayOfWeekChart({ data }: { data: CategoryPoint[] }) {
           formatter={(v: number) => [INR(v), 'Avg Income']}
           contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
         />
-        <Bar dataKey="value" name="Avg Income" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={40} />
+        <Bar dataKey="value" name="Avg Income" radius={[4, 4, 0, 0]} maxBarSize={40}>
+          {data.map((d, i) => (
+            <Cell key={i} fill={barColor(d.value)} />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
+  );
+}
+
+// ─── 7. Cash vs Digital circular progress ring ───────────────────────────────
+export function CashDigitalRing({ cashPct }: { cashPct: number }) {
+  const r            = 28;
+  const circumference = 2 * Math.PI * r;
+  const cashDash     = Math.min(Math.max(cashPct, 0), 100) / 100 * circumference;
+  const digitalPct   = 100 - cashPct;
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="relative flex-shrink-0">
+        <svg width={72} height={72} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={36} cy={36} r={r} fill="none" stroke="#e2e8f0" strokeWidth={7} />
+          <circle
+            cx={36} cy={36} r={r} fill="none"
+            stroke="#2563eb" strokeWidth={7}
+            strokeDasharray={`${cashDash} ${circumference}`}
+            strokeLinecap="round"
+          />
+          <circle
+            cx={36} cy={36} r={r} fill="none"
+            stroke="#8b5cf6"
+            strokeWidth={7}
+            strokeDasharray={`${circumference - cashDash} ${circumference}`}
+            strokeDashoffset={-cashDash}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-[11px] font-bold font-mono text-slate-800 leading-none">{cashPct}%</span>
+          <span className="text-[8px] text-slate-400 leading-none mt-0.5">Cash</span>
+        </div>
+      </div>
+      <div className="space-y-1 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-blue-600 flex-shrink-0" />
+          <span className="text-slate-600">Cash <span className="font-semibold font-mono">{cashPct}%</span></span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-violet-500 flex-shrink-0" />
+          <span className="text-slate-600">Digital <span className="font-semibold font-mono">{digitalPct}%</span></span>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -176,11 +176,21 @@ export default function AdminPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     setDeleteErr('');
+    const targetName = deleteTarget.full_name;
     try {
       const res = await fetch(`/api/admin/users?id=${deleteTarget.id}`, { method: 'DELETE' });
       const d = await res.json();
-      if (res.ok) { setDeleteTarget(null); setDeleteErr(''); loadUsers(); }
-      else { setDeleteErr(d.message || 'Delete failed. The user may have linked records.'); }
+      if (res.ok) {
+        setDeleteTarget(null);
+        setDeleteErr('');
+        loadUsers();
+        if (d.deactivated) {
+          setUserError(`"${targetName}" has financial entries and was set to Inactive instead of permanently deleted, to preserve audit records.`);
+          setTimeout(() => setUserError(''), 7000);
+        }
+      } else {
+        setDeleteErr(d.message || 'Delete failed.');
+      }
     } catch { setDeleteErr('Network error. Please try again.'); }
     setDeleting(false);
   };
@@ -493,10 +503,13 @@ export default function AdminPage() {
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:px-4">
           <div className="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-white p-6 sm:p-8 shadow-2xl space-y-4">
-            <h3 className="text-lg font-semibold text-slate-900">Delete User?</h3>
+            <h3 className="text-lg font-semibold text-slate-900">Remove User?</h3>
             <p className="text-sm text-slate-600">
-              Are you sure you want to delete <span className="font-semibold">{deleteTarget.full_name}</span>? This cannot be undone.
+              Remove <span className="font-semibold">{deleteTarget.full_name}</span> from the system?
             </p>
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800">
+              If this user has financial entries, they will be <strong>set to Inactive</strong> instead of permanently deleted — this protects your audit records.
+            </div>
             {deleteErr && (
               <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3">
                 <p className="text-sm text-red-700">{deleteErr}</p>

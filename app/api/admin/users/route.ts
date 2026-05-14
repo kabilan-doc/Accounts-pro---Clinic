@@ -106,18 +106,33 @@ export async function DELETE(request: Request) {
   const id  = url.searchParams.get('id');
   if (!id) return NextResponse.json({ message: 'User id required.' }, { status: 400 });
 
-  // Nullify entered_by on any entries this user created so the FK constraint doesn't block deletion
-  const { error: nullifyError } = await supabaseAdmin
+  // Check if this user has any linked entries (entered_by is NOT NULL in DB schema)
+  const { count, error: countError } = await supabaseAdmin
     .from('account_entries')
-    .update({ entered_by: null })
+    .select('*', { count: 'exact', head: true })
     .eq('entered_by', id);
 
-  if (nullifyError) {
-    return NextResponse.json({ message: nullifyError.message }, { status: 500 });
+  if (countError) {
+    return NextResponse.json({ message: countError.message }, { status: 500 });
   }
 
+  if (count && count > 0) {
+    // User has financial entries — deactivate instead of hard-delete to preserve audit integrity
+    const { error: deactivateError } = await supabaseAdmin
+      .from('profiles')
+      .update({ is_active: false })
+      .eq('id', id);
+
+    if (deactivateError) {
+      return NextResponse.json({ message: deactivateError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, deactivated: true });
+  }
+
+  // No entries — safe to permanently delete
   const { error } = await supabaseAdmin.from('profiles').delete().eq('id', id);
   if (error) return NextResponse.json({ message: error.message }, { status: 500 });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, deactivated: false });
 }
