@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Download, FileText, Filter } from 'lucide-react';
+import { Download, FileText, Filter, Search, X } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
 import { EntryTable, type EntryRow } from '@/components/EntryTable';
@@ -24,6 +24,8 @@ export default function HistoryPage() {
   const [entryType,    setEntryType]    = useState('');
   const [category,     setCategory]     = useState('');
   const [paymentMode,  setPaymentMode]  = useState('');
+  const [search,       setSearch]       = useState('');
+  const [searchInput,  setSearchInput]  = useState('');
   const [page,         setPage]         = useState(1);
   const [showFilters,  setShowFilters]  = useState(false);
 
@@ -40,8 +42,9 @@ export default function HistoryPage() {
     if (entryType)   params.set('entry_type',   entryType);
     if (category)    params.set('category',     category);
     if (paymentMode) params.set('payment_mode', paymentMode);
+    if (search)      params.set('search',       search);
     return params.toString();
-  }, [startDate, endDate, entryType, category, paymentMode]);
+  }, [startDate, endDate, entryType, category, paymentMode, search]);
 
   const load = useCallback(async (p: number) => {
     setLoading(true);
@@ -59,8 +62,8 @@ export default function HistoryPage() {
     }
   }, [buildQS]);
 
-  // When filters change: reset to page 1 and reload
-  useEffect(() => { setPage(1); load(1); }, [startDate, endDate, entryType, category, paymentMode]);
+  // When filters/search change: reset to page 1 and reload
+  useEffect(() => { setPage(1); load(1); }, [startDate, endDate, entryType, category, paymentMode, search]);
 
   const handlePageChange = (p: number) => { setPage(p); load(p); };
 
@@ -126,6 +129,44 @@ export default function HistoryPage() {
             </div>
           </div>
 
+          {/* ── search bar ── */}
+          <form
+            onSubmit={e => { e.preventDefault(); setSearch(searchInput.trim()); }}
+            className="flex gap-2"
+          >
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                placeholder="Search by description, category, or amount…"
+                className="w-full rounded-2xl border border-slate-200 bg-white pl-9 pr-10 py-2.5 text-sm shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchInput(''); setSearch(''); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="rounded-2xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              Search
+            </button>
+          </form>
+          {search && (
+            <p className="text-xs text-slate-500">
+              Showing results for <span className="font-semibold text-slate-700">"{search}"</span>
+              <button onClick={() => { setSearch(''); setSearchInput(''); }} className="ml-2 text-brand-600 hover:underline">clear</button>
+            </p>
+          )}
+
           {/* ── filter panel ── */}
           {showFilters && (
             <div className="card space-y-4">
@@ -186,7 +227,7 @@ export default function HistoryPage() {
               </div>
               <button
                 type="button"
-                onClick={() => { setStartDate(monthStartStr()); setEndDate(todayStr()); setEntryType(''); setCategory(''); setPaymentMode(''); }}
+                onClick={() => { setStartDate(monthStartStr()); setEndDate(todayStr()); setEntryType(''); setCategory(''); setPaymentMode(''); setSearch(''); setSearchInput(''); }}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
               >
                 Reset filters

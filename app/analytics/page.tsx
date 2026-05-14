@@ -191,20 +191,41 @@ export default function AnalyticsPage() {
           </div>
 
           {/* totals */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="card border-l-4 border-l-green-400">
               <p className="text-sm text-slate-500">Total Income</p>
-              <p className="mt-1 text-2xl font-bold text-green-600">{loading ? '—' : formatINR(totalIncome)}</p>
+              <p className="mt-1 text-2xl font-bold font-mono text-green-600">{loading ? '—' : formatINR(totalIncome)}</p>
             </div>
             <div className="card border-l-4 border-l-red-400">
               <p className="text-sm text-slate-500">Total Expense</p>
-              <p className="mt-1 text-2xl font-bold text-red-500">{loading ? '—' : formatINR(totalExpense)}</p>
+              <p className="mt-1 text-2xl font-bold font-mono text-red-500">{loading ? '—' : formatINR(totalExpense)}</p>
             </div>
             <div className="card border-l-4 border-l-brand-500">
               <p className="text-sm text-slate-500">Net Balance</p>
-              <p className={`mt-1 text-2xl font-bold ${totalIncome - totalExpense >= 0 ? 'text-slate-900' : 'text-red-500'}`}>
+              <p className={`mt-1 text-2xl font-bold font-mono ${totalIncome - totalExpense >= 0 ? 'text-blue-700' : 'text-red-500'}`}>
                 {loading ? '—' : formatINR(totalIncome - totalExpense)}
               </p>
+            </div>
+            <div className={`card border-l-4 ${
+              !loading && totalIncome > 0
+                ? (((totalIncome - totalExpense) / totalIncome) >= 0.5 ? 'border-l-green-500' : ((totalIncome - totalExpense) / totalIncome) >= 0.2 ? 'border-l-amber-400' : 'border-l-red-400')
+                : 'border-l-slate-300'
+            }`}>
+              <p className="text-sm text-slate-500">Profit Margin</p>
+              {loading ? (
+                <p className="mt-1 text-2xl font-bold text-slate-400">—</p>
+              ) : totalIncome > 0 ? (() => {
+                const margin = (totalIncome - totalExpense) / totalIncome * 100;
+                const cls    = margin >= 50 ? 'text-green-600' : margin >= 20 ? 'text-amber-600' : 'text-red-500';
+                return (
+                  <>
+                    <p className={`mt-1 text-2xl font-bold font-mono ${cls}`}>{margin.toFixed(1)}%</p>
+                    <p className="mt-1 text-xs text-slate-400">(Income − Expense) ÷ Income</p>
+                  </>
+                );
+              })() : (
+                <p className="mt-1 text-2xl font-bold text-slate-400">—</p>
+              )}
             </div>
           </div>
 

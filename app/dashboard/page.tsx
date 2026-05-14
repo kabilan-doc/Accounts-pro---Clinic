@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   TrendingUp, TrendingDown, Wallet,
   Banknote, Smartphone, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Target, BarChart2, LineChart as LineChartIcon
+  ArrowUpRight, ArrowDownRight, Target, BarChart2, LineChart as LineChartIcon,
+  Flag, Pencil, Check
 } from 'lucide-react';
 import { SummaryCard } from '@/components/SummaryCard';
 import { Sidebar } from '@/components/Sidebar';
@@ -51,6 +52,25 @@ export default function DashboardPage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [chartMode, setChartMode] = useState<'bar' | 'cumulative'>('bar');
+
+  // ── Monthly Target ──────────────────────────────────────────────────────────
+  const targetKey = `monthly_target_${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+  const [target,      setTarget]      = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    return Number(localStorage.getItem(targetKey) ?? '0');
+  });
+  const [editingTarget, setEditingTarget] = useState(false);
+  const [targetInput,   setTargetInput]   = useState('');
+  const targetInputRef = useRef<HTMLInputElement>(null);
+
+  const saveTarget = () => {
+    const v = Number(targetInput.replace(/[^0-9.]/g, ''));
+    if (!isNaN(v) && v > 0) {
+      localStorage.setItem(targetKey, String(v));
+      setTarget(v);
+    }
+    setEditingTarget(false);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -202,6 +222,67 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* ── monthly target tracker ── */}
+          {!loading && (
+            <div className="animate-fadeIn rounded-2xl border border-slate-200/80 bg-white/90 backdrop-blur-sm shadow-sm px-5 py-4">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <Flag size={15} className="text-brand-600" />
+                  <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Monthly Revenue Target</p>
+                </div>
+                {!editingTarget ? (
+                  <button
+                    type="button"
+                    onClick={() => { setTargetInput(target > 0 ? String(target) : ''); setEditingTarget(true); setTimeout(() => targetInputRef.current?.focus(), 50); }}
+                    className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                  >
+                    <Pencil size={11} /> {target > 0 ? 'Edit' : 'Set goal'}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={targetInputRef}
+                      type="number"
+                      value={targetInput}
+                      onChange={e => setTargetInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveTarget(); if (e.key === 'Escape') setEditingTarget(false); }}
+                      placeholder="Enter target amount"
+                      className="w-36 rounded-xl border border-brand-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+                    />
+                    <button type="button" onClick={saveTarget} className="rounded-xl bg-brand-600 p-1.5 text-white hover:bg-brand-700">
+                      <Check size={13} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {target > 0 ? (() => {
+                const income    = month?.income ?? 0;
+                const pct       = Math.min(100, Math.round(income / target * 100));
+                const remaining = Math.max(0, target - income);
+                const over      = income > target;
+                const barColor  = over ? 'bg-green-500' : pct >= 70 ? 'bg-brand-500' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400';
+                return (
+                  <div>
+                    <div className="flex items-end justify-between mb-1.5 text-xs text-slate-500">
+                      <span><span className="font-bold text-slate-800 text-sm font-mono">{pct}%</span> of goal reached</span>
+                      <span>{over ? <span className="text-green-600 font-semibold">Goal exceeded! 🎉</span> : `${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(remaining)} remaining`}</span>
+                    </div>
+                    <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500 ${barColor}`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <div className="flex justify-between mt-1 text-[10px] text-slate-400">
+                      <span>₹0</span>
+                      <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(target)}</span>
+                    </div>
+                  </div>
+                );
+              })() : (
+                <p className="text-sm text-slate-400">Set a monthly revenue goal to track your progress here.</p>
+              )}
+            </div>
+          )}
 
           {/* ── financial insights ── */}
           {!loading && activeDays > 0 && (

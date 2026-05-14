@@ -17,6 +17,8 @@ export async function GET(request: Request) {
   const startDate = searchParams.get('start_date');
   const endDate = searchParams.get('end_date');
 
+  const search = searchParams.get('search');
+
   const query = supabaseAdmin.from('account_entries').select('*', { count: 'estimated' }).order('entry_date', { ascending: false });
 
   if (entryType) query.eq('entry_type', entryType);
@@ -25,6 +27,15 @@ export async function GET(request: Request) {
   if (enteredBy) query.eq('entered_by', enteredBy);
   if (startDate) query.gte('entry_date', startDate);
   if (endDate) query.lte('entry_date', endDate);
+  if (search) {
+    const trimmed = search.trim();
+    const asNum = Number(trimmed);
+    if (!isNaN(asNum) && trimmed !== '') {
+      query.eq('amount', asNum);
+    } else {
+      query.or(`description.ilike.%${trimmed}%,category.ilike.%${trimmed}%`);
+    }
+  }
 
   const { data, count, error } = await query.range((page - 1) * 20, page * 20 - 1);
   if (error) {
