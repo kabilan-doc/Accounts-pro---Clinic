@@ -73,38 +73,10 @@ async function fetchMonthStats(fy: number, month: string): Promise<MonthStats> {
 }
 
 async function fetchDayStats(start: string, end: string): Promise<DayStats[]> {
-  let all: any[] = [];
-  let page = 1;
-  while (true) {
-    const res = await fetch(`/api/entries?start_date=${start}&end_date=${end}&page=${page}`);
-    if (!res.ok) break;
-    const data = await res.json();
-    all = all.concat(data.entries ?? []);
-    if (all.length >= (data.count ?? 0)) break;
-    page++;
-  }
-  const byDate: Record<string, any[]> = {};
-  for (const e of all) {
-    if (e.is_voided) continue;
-    if (!byDate[e.entry_date]) byDate[e.entry_date] = [];
-    byDate[e.entry_date].push(e);
-  }
-  const s = (arr: any[]) => arr.reduce((x, e) => x + Number(e.amount), 0);
-  return Object.keys(byDate).sort().map(date => {
-    const entries = byDate[date];
-    const inc = entries.filter((e: any) => e.entry_type === 'income' && e.subcategory !== 'GPay');
-    const exp = entries.filter((e: any) => e.entry_type === 'expense');
-    const real = [...inc, ...exp];
-    return {
-      date, income: s(inc), expense: s(exp), net: s(inc) - s(exp),
-      cash:         s(real.filter((e: any) => e.payment_mode === 'Cash')),
-      upi:          s(real.filter((e: any) => e.payment_mode === 'UPI')),
-      consultation: s(inc.filter((e: any) => e.category === 'Consultation')),
-      pharmacy:     s(inc.filter((e: any) => e.category === 'Pharmacy Sales')),
-      procedure:    s(inc.filter((e: any) => e.category === 'Procedure')),
-      other:        s(inc.filter((e: any) => e.category === 'Other Income')),
-    };
-  });
+  const res = await fetch(`/api/accounts/daily-breakdown?start=${start}&end=${end}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.days ?? [];
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
